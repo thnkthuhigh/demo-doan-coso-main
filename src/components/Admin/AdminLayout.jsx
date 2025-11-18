@@ -12,18 +12,24 @@ const AdminLayout = ({ children }) => {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
+          console.warn("⚠️ No token found, redirecting to login");
           toast.error("Vui lòng đăng nhập để tiếp tục");
           navigate("/login");
           return;
         }
 
         const user = JSON.parse(localStorage.getItem("user"));
+        console.log("👤 Current user:", user);
+        
         if (!user || user.role !== "admin") {
+          console.warn("⚠️ User is not admin, redirecting home");
           toast.error("Bạn không có quyền truy cập trang này");
           navigate("/");
+        } else {
+          console.log("✅ Admin authenticated successfully");
         }
       } catch (error) {
-        console.error("Auth error:", error);
+        console.error("❌ Auth error:", error);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         toast.error("Phiên đăng nhập không hợp lệ");

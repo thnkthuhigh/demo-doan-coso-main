@@ -22,12 +22,17 @@ import Statistics from "../Statistics";
 import UserManagement from "../UserManagement";
 import GymLocationManagement from "../GymLocationManagement";
 import ChatSupportManagement from "../ChatSupportManagement";
+import ActiveChats from "../ActiveChats";
 
 const AdminDashboard = () => {
   const [activeModule, setActiveModule] = useState("dashboard");
 
+  // Debug log
+  console.log("🎯 Active Module:", activeModule);
+
   // Render content based on active module
   const renderContent = () => {
+    console.log("🔄 Rendering content for:", activeModule);
     switch (activeModule) {
       case "users":
         return <UserManagement />;

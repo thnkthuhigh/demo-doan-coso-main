@@ -10,7 +10,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  updateUser: (updatedUser: User) => void;
+  updateUser: (updatedUser: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,8 +78,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateUser = (updatedUser: User) => {
-    setUser(updatedUser);
+  const updateUser = async (updatedUser: User) => {
+    try {
+      setUser(updatedUser);
+      // Also save to AsyncStorage for persistence
+      await authService.storeUser(updatedUser);
+    } catch (error) {
+      console.error('Update user error:', error);
+    }
   };
 
   return (

@@ -235,3 +235,71 @@ export const getSupportStaff = async (req, res) => {
     });
   }
 };
+
+// Get active conversations (for admin dashboard)
+export const getActiveConversations = async (req, res) => {
+  try {
+    const { minutes = 10 } = req.query;
+    const timeThreshold = new Date(Date.now() - minutes * 60 * 1000);
+
+    // Find conversations with recent messages (support type only)
+    const activeConversations = await Conversation.find({
+      lastMessageTime: { $gte: timeThreshold },
+      isActive: true,
+      type: "support", // Only support conversations, not admin-to-admin
+    })
+      .populate("participants", "username fullName avatar role email")
+      .populate({
+        path: "lastMessage",
+        populate: { path: "sender", select: "username fullName avatar" },
+      })
+      .sort({ lastMessageTime: -1 })
+      .limit(50);
+
+    // Format response with additional info and remove duplicates by user
+    const userConversationMap = new Map();
+    
+    activeConversations.forEach((conv) => {
+      const nonAdminParticipants = conv.participants.filter(
+        (p) => p.role !== "admin" && p.role !== "instructor"
+      );
+      
+      const user = nonAdminParticipants[0] || conv.participants[0];
+      const userId = user?._id?.toString();
+      
+      // Skip if no user or already have a more recent conversation for this user
+      if (!userId) return;
+      
+      const existing = userConversationMap.get(userId);
+      const convTime = new Date(conv.lastMessageTime).getTime();
+      
+      if (!existing || convTime > new Date(existing.lastMessageTime).getTime()) {
+        userConversationMap.set(userId, {
+          _id: conv._id,
+          participants: conv.participants,
+          lastMessage: conv.lastMessage,
+          lastMessageTime: conv.lastMessageTime,
+          unreadCount: conv.unreadCount,
+          type: conv.type,
+          title: conv.title,
+          user: user,
+          isOnline: (new Date() - new Date(conv.lastMessageTime)) < 5 * 60 * 1000,
+        });
+      }
+    });
+    
+    const formattedConversations = Array.from(userConversationMap.values());
+
+    res.json({ 
+      conversations: formattedConversations,
+      count: formattedConversations.length,
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    console.error("Get active conversations error:", error);
+    res.status(500).json({
+      message: "Lỗi khi lấy danh sách chat đang hoạt động",
+      error: error.message,
+    });
+  }
+};

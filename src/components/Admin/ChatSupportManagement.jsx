@@ -20,13 +20,17 @@ const ChatSupportManagement = () => {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
+  const [activeTab, setActiveTab] = useState("all"); // "all" or "online"
   const messagesEndRef = useRef(null);
   const pollInterval = useRef(null);
 
+  // Ensure messages is always an array
+  const safeMessages = Array.isArray(messages) ? messages : [];
+
   useEffect(() => {
     fetchConversations();
-    // Poll for new conversations every 5 seconds
-    const interval = setInterval(fetchConversations, 5000);
+    // Poll for new conversations every 10 seconds (reduced from 5)
+    const interval = setInterval(fetchConversations, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -35,13 +39,13 @@ const ChatSupportManagement = () => {
       fetchMessages(selectedConversation._id);
       markAsRead(selectedConversation._id);
       
-      // Poll for new messages every 3 seconds
+      // Poll for new messages every 5 seconds (reduced from 3)
       if (pollInterval.current) {
         clearInterval(pollInterval.current);
       }
       pollInterval.current = setInterval(() => {
         fetchMessages(selectedConversation._id);
-      }, 3000);
+      }, 5000);
     }
 
     return () => {
@@ -66,10 +70,18 @@ const ChatSupportManagement = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      // Filter only support conversations
-      const supportConversations = response.data.filter(
-        (conv) => conv.type === "support"
-      );
+      // Get conversations array from response
+      const conversationsData = response.data.conversations || response.data || [];
+      
+      // Filter only support conversations and add online status
+      const supportConversations = conversationsData
+        .filter((conv) => conv.type === "support")
+        .map((conv) => {
+          const isOnline = conv.lastMessageTime && 
+            (new Date() - new Date(conv.lastMessageTime)) < 5 * 60 * 1000; // 5 minutes
+          return { ...conv, isOnline };
+        });
+      
       setConversations(supportConversations);
     } catch (error) {
       console.error("Error fetching conversations:", error);
@@ -87,9 +99,15 @@ const ChatSupportManagement = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setMessages(response.data);
+      // Backend returns { messages: [...] }
+      const messagesData = response.data.messages || response.data || [];
+      
+      // Ensure we set an array
+      const safeMessagesData = Array.isArray(messagesData) ? messagesData : [];
+      setMessages(safeMessagesData);
     } catch (error) {
       console.error("Error fetching messages:", error);
+      setMessages([]); // Set empty array on error
     }
   };
 
@@ -158,6 +176,11 @@ const ChatSupportManagement = () => {
   const filteredConversations = conversations.filter((conv) => {
     const otherUser = conv.participants.find((p) => p._id !== currentUserId);
     if (!otherUser) return false;
+    
+    // Filter by tab
+    if (activeTab === "online" && !conv.isOnline) return false;
+    
+    // Filter by search
     const searchLower = searchTerm.toLowerCase();
     return (
       otherUser.username?.toLowerCase().includes(searchLower) ||
@@ -165,6 +188,8 @@ const ChatSupportManagement = () => {
       conv.lastMessage?.content?.toLowerCase().includes(searchLower)
     );
   });
+
+  const onlineCount = conversations.filter(conv => conv.isOnline).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 p-6">
@@ -174,15 +199,47 @@ const ChatSupportManagement = () => {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-2xl shadow-xl p-8 mb-6"
       >
-        <div className="flex items-center gap-4">
-          <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-4 rounded-xl shadow-lg">
-            <MessageCircle className="text-white" size={32} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-4 rounded-xl shadow-lg">
+              <MessageCircle className="text-white" size={32} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">Chat & Hỗ Trợ</h1>
+              <p className="text-gray-500 mt-1">
+                Trả lời tin nhắn từ người dùng ({conversations.length} cuộc hội thoại)
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Chat & Hỗ Trợ</h1>
-            <p className="text-gray-500 mt-1">
-              Trả lời tin nhắn từ người dùng ({conversations.length} cuộc hội thoại)
-            </p>
+          
+          {/* Tabs */}
+          <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab("all")}
+              className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                activeTab === "all"
+                  ? "bg-white text-purple-600 shadow-md"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Tất cả
+            </button>
+            <button
+              onClick={() => setActiveTab("online")}
+              className={`px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "online"
+                  ? "bg-white text-green-600 shadow-md"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <Circle className={`w-2 h-2 ${activeTab === "online" ? "fill-current" : ""}`} />
+              Đang online
+              {onlineCount > 0 && (
+                <span className="bg-green-500 text-white text-xs rounded-full px-2 py-0.5 font-semibold">
+                  {onlineCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </motion.div>
@@ -233,13 +290,21 @@ const ChatSupportManagement = () => {
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0">
-                          {otherUser?.username?.[0]?.toUpperCase() || "U"}
+                        <div className="relative flex-shrink-0">
+                          <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
+                            {otherUser?.username?.[0]?.toUpperCase() || "U"}
+                          </div>
+                          {conv.isOnline && (
+                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <h3 className="font-semibold text-gray-800 truncate">
+                            <h3 className="font-semibold text-gray-800 truncate flex items-center gap-2">
                               {otherUser?.fullName || otherUser?.username || "User"}
+                              {conv.isOnline && (
+                                <span className="text-xs text-green-600 font-normal">● Online</span>
+                              )}
                             </h3>
                             {unreadCount > 0 && (
                               <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 font-semibold">
@@ -294,14 +359,14 @@ const ChatSupportManagement = () => {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                  {messages.length === 0 ? (
+                  {safeMessages.length === 0 ? (
                     <div className="text-center py-20 text-gray-500">
                       <MessageCircle size={48} className="mx-auto mb-4 text-gray-300" />
                       <p>Chưa có tin nhắn nào</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {messages.map((msg) => {
+                      {safeMessages.map((msg) => {
                         const isOwn = msg.sender._id === currentUserId;
                         return (
                           <motion.div

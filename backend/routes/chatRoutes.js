@@ -6,8 +6,9 @@ import {
   getMessages,
   markConversationAsRead,
   getSupportStaff,
+  getActiveConversations,
 } from "../controllers/chatController.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
+import { verifyToken, verifyAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -28,5 +29,8 @@ router.patch("/conversations/:conversationId/read", verifyToken, markConversatio
 
 // Get support staff
 router.get("/support-staff", verifyToken, getSupportStaff);
+
+// Get active conversations (admin only)
+router.get("/conversations/active", verifyToken, verifyAdmin, getActiveConversations);
 
 export default router;

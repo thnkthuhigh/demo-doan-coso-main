@@ -67,6 +67,10 @@ class AuthService {
     return userStr ? JSON.parse(userStr) : null;
   }
 
+  async storeUser(user: User): Promise<void> {
+    await AsyncStorage.setItem('user', JSON.stringify(user));
+  }
+
   async isAuthenticated(): Promise<boolean> {
     const token = await this.getStoredToken();
     return !!token;

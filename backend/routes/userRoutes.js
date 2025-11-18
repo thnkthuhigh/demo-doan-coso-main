@@ -20,6 +20,7 @@ router.post("/register", register);
 router.post("/login", login);
 
 // Protected routes (cần login) - cho phép cả user và admin
+// IMPORTANT: Đặt /profile TRƯỚC /:id để tránh bị catch nhầm
 router.get("/profile", verifyToken, getProfile);
 router.put("/profile", verifyToken, updateProfile);
 router.put("/change-password", verifyToken, changePassword);
@@ -27,8 +28,9 @@ router.put("/change-password", verifyToken, changePassword);
 // Admin routes
 router.get("/", verifyToken, verifyAdmin, getAllUsers);
 router.post("/admin/create", verifyToken, verifyAdmin, createUserByAdmin);
-// Cho phép admin xem user theo ID mà không cần verifyAdmin riêng
-router.get("/:id", verifyToken, getUserById); // Bỏ verifyAdmin để admin có thể xem
+
+// Dynamic routes - phải đặt SAU các static routes
+router.get("/:id", verifyToken, getUserById);
 router.put("/:id", verifyToken, verifyAdmin, updateUserById);
 router.delete("/:id", verifyToken, verifyAdmin, deleteUser);
 
