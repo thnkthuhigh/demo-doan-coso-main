@@ -5,12 +5,14 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   TextInput,
   ActivityIndicator,
   Alert,
   RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api';
 
@@ -151,35 +153,142 @@ const BodyMetricsScreen = ({ navigation }: any) => {
     });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     Alert.alert(
       'Xác nhận xóa',
       'Bạn có chắc chắn muốn xóa số đo này?',
       [
-        { text: 'Hủy', style: 'cancel' },
+        { 
+          text: 'Hủy', 
+          style: 'cancel',
+          onPress: () => console.log('Cancel delete')
+        },
         {
           text: 'Xóa',
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('🗑️ Deleting metric ID:', id);
               await apiService.delete(`/body-metrics/${id}`);
               Alert.alert('Thành công', 'Đã xóa số đo');
               fetchMetrics();
-            } catch {
+            } catch (error) {
+              console.error('❌ Error deleting metric:', error);
               Alert.alert('Lỗi', 'Không thể xóa số đo');
             }
           },
         },
-      ]
+      ],
+      { cancelable: true }
     );
   };
 
   const getBMIColor = (bmi?: number) => {
     if (!bmi) return '#999';
-    if (bmi < 18.5) return '#FF9800';
-    if (bmi < 25) return '#4CAF50';
-    if (bmi < 30) return '#FF9800';
-    return '#F44336';
+    if (bmi < 18.5) return '#3b82f6'; // Thiếu cân
+    if (bmi < 25) return '#10b981'; // Bình thường
+    if (bmi < 30) return '#f59e0b'; // Thừa cân
+    return '#ef4444'; // Béo phì
+  };
+
+  const getRecommendations = () => {
+    if (!stats) return null;
+
+    const { currentBMI, totalWeightChange } = stats;
+    const recommendations = {
+      status: '',
+      color: '',
+      icon: '',
+      exercises: [] as string[],
+      nutrition: [] as string[],
+      tips: [] as string[],
+    };
+
+    if (currentBMI < 18.5) {
+      // Thiếu cân
+      recommendations.status = 'Thiếu cân - Cần tăng cơ bắp';
+      recommendations.color = '#3b82f6';
+      recommendations.icon = '📈';
+      recommendations.exercises = [
+        '🏋️ Tập tạ tập trung vào nhóm cơ lớn (squat, deadlift, bench press)',
+        '💪 Tập với trọng lượng nặng, ít hiệp (8-12 lần/hiệp)',
+        '🎯 Giảm cardio, tập trung xây dựng cơ bắp',
+      ];
+      recommendations.nutrition = [
+        '🍗 Ăn thặng calories (+300-500 cal/ngày)',
+        '🥩 Protein cao (1.6-2.2g/kg cơ thể)',
+        '🍚 Carb phức hợp (gạo lứt, yến mạch, khoai lang)',
+      ];
+      recommendations.tips = [
+        '💤 Ngủ đủ 7-9 tiếng để cơ phục hồi',
+        '📊 Theo dõi calories và tăng dần',
+      ];
+    } else if (currentBMI >= 18.5 && currentBMI < 25) {
+      // Bình thường
+      recommendations.status = 'Cân nặng lý tưởng - Duy trì & Săn chắc';
+      recommendations.color = '#10b981';
+      recommendations.icon = '✨';
+      recommendations.exercises = [
+        '🏋️ Kết hợp tập tạ và cardio cân bằng',
+        '🔥 HIIT 2-3 lần/tuần để đốt mỡ',
+        '💪 Tập cơ toàn thân 3-4 lần/tuần',
+      ];
+      recommendations.nutrition = [
+        '⚖️ Ăn đủ calories duy trì (TDEE)',
+        '🥗 Cân bằng protein, carb, fat',
+        '🥤 Uống đủ nước 2-3 lít/ngày',
+      ];
+      recommendations.tips = [
+        '📈 Tập trung tăng sức mạnh và sức bền',
+        '🎯 Đặt mục tiêu nâng tạ nặng hơn',
+      ];
+    } else if (currentBMI >= 25 && currentBMI < 30) {
+      // Thừa cân
+      recommendations.status = 'Thừa cân - Cần giảm mỡ';
+      recommendations.color = '#f59e0b';
+      recommendations.icon = '⚠️';
+      recommendations.exercises = [
+        '🏃 Cardio 4-5 lần/tuần (chạy, đạp xe, bơi)',
+        '🔥 HIIT để tăng tốc đốt mỡ',
+        '💪 Tập tạ duy trì cơ bắp (3 lần/tuần)',
+      ];
+      recommendations.nutrition = [
+        '📉 Ăn thiếu calories (-300-500 cal/ngày)',
+        '🥗 Tăng rau xanh, giảm carb tinh chế',
+        '🥩 Giữ protein cao để bảo vệ cơ',
+        '🚫 Tránh đồ ngọt, đồ chiên, nước ngọt',
+      ];
+      recommendations.tips = [
+        '📊 Theo dõi calories mỗi ngày',
+        '⏰ Ăn đúng giờ, không bỏ bữa',
+        '🚶 Tăng hoạt động hàng ngày (đi bộ, leo cầu thang)',
+      ];
+    } else {
+      // Béo phì
+      recommendations.status = 'Béo phì - Ưu tiên giảm cân';
+      recommendations.color = '#ef4444';
+      recommendations.icon = '🚨';
+      recommendations.exercises = [
+        '🚶 Bắt đầu với đi bộ nhanh 30-45 phút/ngày',
+        '🏊 Bơi lội, đạp xe (ít tác động lên khớp)',
+        '💪 Tập tạ nhẹ để duy trì cơ',
+        '⚠️ Tránh tập quá sức, tăng dần cường độ',
+      ];
+      recommendations.nutrition = [
+        '🥗 Ăn thiếu calories (-500-700 cal/ngày)',
+        '🥩 Protein rất cao để giữ cơ',
+        '🥦 Nhiều rau xanh, ít tinh bột',
+        '🚫 Cắt hoàn toàn đồ chiên, fastfood, nước ngọt',
+      ];
+      recommendations.tips = [
+        '👨‍⚕️ Nên tham khảo ý kiến chuyên gia dinh dưỡng',
+        '📊 Theo dõi cân nặng hàng tuần',
+        '🎯 Mục tiêu giảm 0.5-1kg/tuần là an toàn',
+        '💪 Kiên trì là chìa khóa thành công!',
+      ];
+    }
+
+    return recommendations;
   };
 
   const formatDate = (dateString: string) => {
@@ -405,6 +514,48 @@ const BodyMetricsScreen = ({ navigation }: any) => {
           </View>
         )}
 
+        {/* Recommendations Section */}
+        {stats && getRecommendations() && (
+          <View style={styles.recommendationsContainer}>
+            <View style={styles.recommendationsHeader}>
+              <Text style={styles.recommendationsIcon}>{getRecommendations()!.icon}</Text>
+              <Text style={[styles.recommendationsTitle, { color: getRecommendations()!.color }]}>
+                {getRecommendations()!.status}
+              </Text>
+            </View>
+
+            {/* Exercises */}
+            <View style={styles.recommendationSection}>
+              <Text style={styles.recommendationSectionTitle}>🏋️ Gợi ý tập luyện:</Text>
+              {getRecommendations()!.exercises.map((exercise, index) => (
+                <Text key={index} style={styles.recommendationItem}>
+                  • {exercise}
+                </Text>
+              ))}
+            </View>
+
+            {/* Nutrition */}
+            <View style={styles.recommendationSection}>
+              <Text style={styles.recommendationSectionTitle}>🍽️ Dinh dưỡng:</Text>
+              {getRecommendations()!.nutrition.map((item, index) => (
+                <Text key={index} style={styles.recommendationItem}>
+                  • {item}
+                </Text>
+              ))}
+            </View>
+
+            {/* Tips */}
+            <View style={styles.recommendationSection}>
+              <Text style={styles.recommendationSectionTitle}>💡 Lời khuyên:</Text>
+              {getRecommendations()!.tips.map((tip, index) => (
+                <Text key={index} style={styles.recommendationItem}>
+                  • {tip}
+                </Text>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* History List */}
         <View style={styles.historyContainer}>
           <Text style={styles.historyTitle}>📊 Lịch sử số đo</Text>
@@ -419,8 +570,15 @@ const BodyMetricsScreen = ({ navigation }: any) => {
               <View key={metric._id} style={styles.metricCard}>
                 <View style={styles.metricHeader}>
                   <Text style={styles.metricDate}>📅 {formatDate(metric.date)}</Text>
-                  <TouchableOpacity onPress={() => handleDelete(metric._id)}>
-                    <Text style={styles.deleteButton}>🗑️</Text>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      console.log('🔴 DELETE PRESSED:', metric._id);
+                      handleDelete(metric._id);
+                    }}
+                    style={styles.deleteButton}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.deleteIcon}>✕</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -695,7 +853,22 @@ const styles = StyleSheet.create({
     color: '#10b981',
   },
   deleteButton: {
-    fontSize: 18,
+    padding: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteIcon: {
+    fontSize: 20,
+    color: '#ef4444',
+    fontWeight: 'bold',
+  },
+  deleteButtonPressed: {
+    opacity: 0.5,
+    transform: [{ scale: 0.95 }],
   },
   metricBody: {
     gap: 8,
@@ -736,6 +909,45 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
+  },
+  recommendationsContainer: {
+    margin: 16,
+    marginTop: 0,
+    backgroundColor: 'rgba(30, 27, 75, 0.5)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  recommendationsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  recommendationsIcon: {
+    fontSize: 28,
+  },
+  recommendationsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  recommendationSection: {
+    marginBottom: 16,
+  },
+  recommendationSectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  recommendationItem: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    lineHeight: 22,
+    marginBottom: 6,
+    paddingLeft: 8,
   },
 });
 

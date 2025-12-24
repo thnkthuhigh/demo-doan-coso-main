@@ -85,15 +85,40 @@ export default function Login({ setUser }) {
           const fullUserData = userResponse.data;
           localStorage.setItem("user", JSON.stringify(fullUserData));
           setUser(fullUserData);
+
+          // Redirect based on user role
+          if (fullUserData.role === "admin") {
+            navigate("/admin");
+          } else if (fullUserData.role === "trainer") {
+            navigate("/trainer");
+          } else {
+            navigate("/");
+          }
         } catch (profileError) {
           console.error("❌ Error fetching complete profile:", profileError);
           setUser(user);
+
+          // Redirect based on basic user role if profile fetch fails
+          if (user.role === "admin") {
+            navigate("/admin");
+          } else if (user.role === "trainer") {
+            navigate("/trainer");
+          } else {
+            navigate("/");
+          }
         }
       } else {
         setUser(user);
+        
+        // Redirect based on user role
+        if (user.role === "admin") {
+          navigate("/admin");
+        } else if (user.role === "trainer") {
+          navigate("/trainer");
+        } else {
+          navigate("/");
+        }
       }
-
-      navigate("/");
     } catch (error) {
       let errorMessage = "Đăng nhập thất bại, vui lòng thử lại sau.";
 

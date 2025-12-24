@@ -29,6 +29,8 @@ import {
 export default function PaymentPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [activeTab, setActiveTab] = useState("cart"); // "cart" or "pending"
+  const [pendingPayments, setPendingPayments] = useState([]);
   const [userData, setUserData] = useState({ name: "", email: "", phone: "" });
   const [registeredClasses, setRegisteredClasses] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState("");
@@ -130,20 +132,37 @@ export default function PaymentPage() {
         return;
       }
 
-      const [userRes, enrollmentRes] = await Promise.all([
+      const [userRes, enrollmentRes, paymentsRes] = await Promise.all([
         fetch(`http://localhost:5000/api/users/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`http://localhost:5000/api/classes/user/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch(`http://localhost:5000/api/payments/my`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       const userInfo = await userRes.json();
       const enrollments = await enrollmentRes.json();
+      
+      // Handle payments response - might be error object
+      let payments = [];
+      if (paymentsRes.ok) {
+        const paymentsData = await paymentsRes.json();
+        payments = Array.isArray(paymentsData) ? paymentsData : [];
+      } else {
+        console.warn("Failed to fetch payments, using empty array");
+      }
 
       if (!userRes.ok) throw new Error("User API error");
       if (!enrollmentRes.ok) throw new Error("Enrollments API error");
+
+      console.log("=== PAYMENT PAGE DEBUG ===");
+      console.log("Total enrollments fetched:", enrollments.length);
+      console.log("All enrollments:", enrollments);
+      console.log("Enrollments without payment:", enrollments.filter(e => !e.paymentStatus));
 
       setUserData({
         name: userInfo.username,
@@ -151,19 +170,52 @@ export default function PaymentPage() {
         phone: userInfo.phone || "",
       });
 
-      const unpaidEnrollments = enrollments.filter(
-        (enrollment) => !enrollment.paymentStatus
+      // Lấy danh sách enrollment IDs đang có payment pending
+      const pendingClassPayments = payments.filter(
+        payment => payment.status === "pending" && payment.paymentType === "class"
       );
+      
+      const pendingEnrollmentIds = pendingClassPayments
+        .flatMap(payment => payment.registrationIds || [])
+        .map(id => id.toString());
+
+      console.log("Pending enrollment IDs:", pendingEnrollmentIds);
+      console.log("Pending payments:", pendingClassPayments);
+      
+      // Lưu pending payments để hiển thị trong tab "Chờ xác nhận"
+      setPendingPayments(pendingClassPayments);
+
+      // Chỉ hiển thị enrollments chưa thanh toán VÀ không có payment pending
+      const unpaidEnrollments = enrollments.filter(
+        (enrollment) => {
+          const hasClass = !!enrollment.class;
+          const notPaid = !enrollment.paymentStatus;
+          const notPending = !pendingEnrollmentIds.includes(enrollment._id.toString());
+          
+          console.log(`Enrollment ${enrollment._id}:`, {
+            className: enrollment.class?.className,
+            hasClass,
+            notPaid,
+            notPending,
+            willShow: hasClass && notPaid && notPending
+          });
+          
+          return notPaid && hasClass && notPending;
+        }
+      );
+
+      console.log("Unpaid enrollments to show:", unpaidEnrollments.length);
+      console.log("=== END DEBUG ===");
 
       setRegisteredClasses(
         unpaidEnrollments.map((enrollment) => ({
           id: enrollment._id,
-          classId: enrollment.class._id,
-          name: enrollment.class.className,
-          price: enrollment.class.price,
-          serviceName: enrollment.class.serviceName,
-          instructorName: enrollment.class.instructorName,
-          schedule: enrollment.class.schedule,
+          classId: enrollment.class?._id || enrollment.classId,
+          name: enrollment.class?.className || enrollment.name,
+          price: enrollment.class?.price || enrollment.price,
+          serviceName: enrollment.class?.serviceName || enrollment.serviceName,
+          instructorName: enrollment.class?.instructorName || enrollment.instructorName,
+          schedule: enrollment.class?.schedule || enrollment.schedule,
         }))
       );
     } catch (e) {
@@ -177,6 +229,16 @@ export default function PaymentPage() {
   useEffect(() => {
     fetchUnpaidRegistrations();
   }, [userId]);
+
+  // Auto-select class if coming from Classes page with pending payment
+  useEffect(() => {
+    if (location.state?.autoSelectClass && registeredClasses.length > 0) {
+      const classToSelect = location.state.autoSelectClass;
+      setSelectedClasses({ [classToSelect]: true });
+      // Clear the state to prevent re-selection on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, registeredClasses]);
 
   // Hàm xóa đăng ký lớp học
   const handleDeleteRegistration = async (enrollmentId) => {
@@ -639,9 +701,56 @@ export default function PaymentPage() {
                       </p>
                     </div>
                   </div>
+                  
+                  {/* Tabs */}
+                  <div className="flex gap-4 mt-6">
+                    <button
+                      onClick={() => setActiveTab("cart")}
+                      className={`flex-1 px-4 py-3 rounded-xl zen-button transition-all ${
+                        activeTab === "cart"
+                          ? "bg-white text-slate-800"
+                          : "bg-white/10 text-white hover:bg-white/20"
+                      }`}
+                    >
+                      <div className="flex items-center justify-center">
+                        <Receipt className="h-5 w-5 mr-2" />
+                        <span>Giỏ Hàng</span>
+                        {registeredClasses.length > 0 && (
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                            activeTab === "cart" ? "bg-slate-800 text-white" : "bg-white/20"
+                          }`}>
+                            {registeredClasses.length}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("pending")}
+                      className={`flex-1 px-4 py-3 rounded-xl zen-button transition-all ${
+                        activeTab === "pending"
+                          ? "bg-white text-slate-800"
+                          : "bg-white/10 text-white hover:bg-white/20"
+                      }`}
+                    >
+                      <div className="flex items-center justify-center">
+                        <Clock className="h-5 w-5 mr-2" />
+                        <span>Chờ Xác Nhận</span>
+                        {pendingPayments.length > 0 && (
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                            activeTab === "pending" ? "bg-slate-800 text-white" : "bg-white/20"
+                          }`}>
+                            {pendingPayments.length}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="p-8">
+                  {activeTab === "cart" ? (
+                    // Giỏ hàng - existing content
+                    <>
                   {registeredClasses.length === 0 && !membershipPayment ? (
                     <motion.div
                       initial={{ scale: 0.95, opacity: 0 }}
@@ -892,11 +1001,108 @@ export default function PaymentPage() {
                       </div>
                     </div>
                   )}
+                    </>
+                  ) : (
+                    // Tab Chờ Xác Nhận
+                    <div>
+                      {pendingPayments.length === 0 ? (
+                        <motion.div
+                          initial={{ scale: 0.95, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="text-center py-20"
+                        >
+                          <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-8">
+                            <Clock className="h-10 w-10 text-slate-400" />
+                          </div>
+                          <h3 className="text-xl zen-text-heading text-slate-700 mb-4">
+                            Không Có Thanh Toán Chờ Xác Nhận
+                          </h3>
+                          <p className="zen-text-primary text-slate-500">
+                            Các khoản thanh toán của bạn sẽ hiển thị ở đây khi đang chờ xác nhận từ admin
+                          </p>
+                        </motion.div>
+                      ) : (
+                        <div className="space-y-6">
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                            <div className="flex items-start">
+                              <Clock className="h-6 w-6 text-yellow-600 mt-1 mr-3" />
+                              <div>
+                                <h3 className="zen-text-heading text-yellow-800 mb-2">
+                                  Đang Chờ Xác Nhận
+                                </h3>
+                                <p className="zen-text-primary text-yellow-700 text-sm">
+                                  Thanh toán của bạn đang được xử lý. Admin sẽ xác nhận trong thời gian sớm nhất.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {pendingPayments.map((payment) => (
+                            <motion.div
+                              key={payment._id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="zen-card border border-slate-200 rounded-xl p-6"
+                            >
+                              <div className="flex justify-between items-start mb-4">
+                                <div>
+                                  <div className="flex items-center mb-2">
+                                    <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm zen-text-heading mr-3">
+                                      Chờ Xác Nhận
+                                    </span>
+                                    <span className="text-sm text-slate-500">
+                                      {new Date(payment.createdAt).toLocaleDateString('vi-VN')}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-slate-600 zen-text-primary">
+                                    Mã thanh toán: <span className="font-mono">{payment._id.substring(payment._id.length - 8).toUpperCase()}</span>
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-2xl zen-text-heading text-slate-900">
+                                    {new Intl.NumberFormat('vi-VN').format(payment.amount)}₫
+                                  </p>
+                                  <p className="text-sm text-slate-500 mt-1">
+                                    {payment.method}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="zen-divider my-4"></div>
+
+                              <div className="space-y-3">
+                                <p className="text-sm zen-text-heading text-slate-700 mb-2">
+                                  Lớp học đã đăng ký:
+                                </p>
+                                {payment.registrationIds && payment.registrationIds.map((regId, idx) => {
+                                  // Find class info from enrollments
+                                  const classInfo = registeredClasses.find(c => c.id === regId) || 
+                                                  { name: 'Lớp học', serviceName: 'Dịch vụ', price: 0 };
+                                  return (
+                                    <div key={idx} className="flex justify-between items-center bg-slate-50 rounded-lg p-3">
+                                      <div>
+                                        <p className="zen-text-heading text-slate-800">{classInfo.name}</p>
+                                        <p className="text-sm text-slate-500">{classInfo.serviceName}</p>
+                                      </div>
+                                      <p className="zen-text-heading text-slate-700">
+                                        {new Intl.NumberFormat('vi-VN').format(classInfo.price)}₫
+                                      </p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
 
-            {/* Payment Methods - 2 columns */}
+            {/* Payment Methods - 2 columns - Only show in cart tab */}
+            {activeTab === "cart" && (
             <motion.div variants={itemVariants} className="xl:col-span-2">
               <div className="zen-card rounded-2xl overflow-hidden sticky top-24">
                 <div className="bg-gradient-to-r from-slate-700 to-slate-800 p-6">
@@ -1020,6 +1226,7 @@ export default function PaymentPage() {
                 </div>
               </div>
             </motion.div>
+            )}
           </div>
         </div>
 

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiService from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,59 +21,63 @@ interface Payment {
   createdAt: string;
 }
 
-interface Attendance {
-  _id: string;
-  classId: {
-    name: string;
-  };
-  sessionNumber: number;
-  sessionDate: string;
-  isPresent: boolean;
-  checkinTime: string;
-}
-
 const HistoryScreen = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'payments' | 'attendance'>('payments');
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const fetchPayments = useCallback(async () => {
     try {
-      const userId = (user as any)?._id || (user as any)?.id;
-      if (!userId) return;
+      // Check token first
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        console.warn('No token found - user not logged in');
+        setIsLoggedIn(false);
+        setPayments([]);
+        return;
+      }
 
-      const response = await apiService.get(`/payments/user/${userId}`);
+      const userId = (user as any)?._id || (user as any)?.id;
+      if (!userId) {
+        console.warn('No user ID found for fetching payments');
+        setIsLoggedIn(false);
+        setPayments([]);
+        return;
+      }
+
+      setIsLoggedIn(true);
+      console.log('Fetching payments for user:', userId);
+      // Backend gets userId from token, not from URL
+      const response = await apiService.get('/payments/user');
+      console.log('Payments received:', response);
       setPayments(response as Payment[]);
-    } catch (error) {
-      console.error('Error fetching payments:', error);
-      // Set empty array on error to avoid showing error toast
+    } catch (err: any) {
+      // Only log if it's not a 404 or expected error
+      const isNotFound = err?.message?.includes('404') || err?.message?.includes('không tìm thấy');
+      if (!isNotFound) {
+        console.error('Error fetching payments:', err?.message);
+      }
+      // Set empty array on error
       setPayments([]);
-    }
-  }, [user]);
-
-  const fetchAttendances = useCallback(async () => {
-    try {
-      const userId = (user as any)?._id || (user as any)?.id;
-      if (!userId) return;
-
-      const response = await apiService.get(`/attendances/user/${userId}/report`);
-      setAttendances(response as Attendance[]);
-    } catch (error) {
-      console.error('Error fetching attendances:', error);
-      // Set empty array on error to avoid showing error toast
-      setAttendances([]);
     }
   }, [user]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchPayments(), fetchAttendances()]);
-    setLoading(false);
-    setRefreshing(false);
-  }, [fetchPayments, fetchAttendances]);
+    setError(null);
+    try {
+      await fetchPayments();
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      setError(err?.message || 'Không thể tải dữ liệu');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [fetchPayments]);
 
   useEffect(() => {
     fetchData();
@@ -159,38 +164,6 @@ const HistoryScreen = () => {
     </View>
   );
 
-  const renderAttendanceItem = (attendance: Attendance) => (
-    <View key={attendance._id} style={styles.historyCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderLeft}>
-          <Text style={styles.cardIcon}>{attendance.isPresent ? '✅' : '❌'}</Text>
-          <View>
-            <Text style={styles.cardTitle}>{attendance.classId?.name || 'Lớp học'}</Text>
-            <Text style={styles.cardSubtitle}>Buổi {attendance.sessionNumber}</Text>
-          </View>
-        </View>
-      </View>
-      
-      <View style={styles.cardFooter}>
-        <Text style={styles.date}>
-          {formatDate(attendance.sessionDate)}
-          {attendance.checkinTime && ` - ${formatTime(attendance.checkinTime)}`}
-        </Text>
-        <View style={[
-          styles.statusBadge, 
-          attendance.isPresent ? styles.presentBadge : styles.absentBadge
-        ]}>
-          <Text style={[
-            styles.statusText, 
-            attendance.isPresent ? styles.presentText : styles.absentText
-          ]}>
-            {attendance.isPresent ? 'Có mặt' : 'Vắng mặt'}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -200,29 +173,26 @@ const HistoryScreen = () => {
     );
   }
 
+  if (error && !loading) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={styles.errorTitle}>Không thể tải dữ liệu</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={() => fetchData()}
+        >
+          <Text style={styles.retryButtonText}>Thử lại</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Lịch Sử</Text>
-      </View>
-
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'payments' && styles.activeTab]}
-          onPress={() => setActiveTab('payments')}
-        >
-          <Text style={[styles.tabText, activeTab === 'payments' && styles.activeTabText]}>
-            Thanh toán
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'attendance' && styles.activeTab]}
-          onPress={() => setActiveTab('attendance')}
-        >
-          <Text style={[styles.tabText, activeTab === 'attendance' && styles.activeTabText]}>
-            Điểm danh
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Lịch Sử Thanh Toán</Text>
       </View>
 
       <ScrollView
@@ -232,24 +202,18 @@ const HistoryScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {activeTab === 'payments' ? (
-          payments.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>💳</Text>
-              <Text style={styles.emptyText}>Chưa có lịch sử thanh toán</Text>
-            </View>
-          ) : (
-            payments.map(renderPaymentItem)
-          )
+        {payments.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>💳</Text>
+            <Text style={styles.emptyText}>
+              {!isLoggedIn 
+                ? 'Vui lòng đăng nhập để xem lịch sử thanh toán'
+                : 'Chưa có lịch sử thanh toán'
+              }
+            </Text>
+          </View>
         ) : (
-          attendances.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📋</Text>
-              <Text style={styles.emptyText}>Chưa có lịch sử điểm danh</Text>
-            </View>
-          ) : (
-            attendances.map(renderAttendanceItem)
-          )
+          payments.map(renderPaymentItem)
         )}
       </ScrollView>
     </View>
@@ -275,7 +239,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 48,
     paddingBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
@@ -405,6 +369,47 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    padding: 20,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 24,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

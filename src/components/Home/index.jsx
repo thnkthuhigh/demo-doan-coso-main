@@ -458,7 +458,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {displayedServices.map((service, index) => (
               <motion.div
-                key={service.id}
+                key={service._id || service.id || index}
                 initial={{ opacity: 0, scale: 0.5, rotate: -180 }}
                 whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
                 transition={{ duration: 0.8, delay: index * 0.2 }}
@@ -469,7 +469,7 @@ export default function HomePage() {
                 className="group perspective-1000"
               >
                 <UltraServiceCard
-                  id={service.id}
+                  id={service._id || service.id}
                   title={service.title}
                   image={service.image}
                   index={index}

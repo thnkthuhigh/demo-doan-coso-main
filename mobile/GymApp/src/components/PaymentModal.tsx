@@ -10,13 +10,14 @@ import {
   Alert,
   Clipboard,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 import apiService from '../services/api';
 
 interface PaymentModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  itemType: 'class' | 'membership';
+  itemType: 'class' | 'membership' | 'service';
   itemId: string;
   itemName: string;
   amount: number;
@@ -42,8 +43,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const [step, setStep] = useState(1); // 1: Chọn phương thức, 2: Thông tin chuyển khoản
   const [processing, setProcessing] = useState(false);
 
-  const handleSelectMethod = (method: 'bank' | 'cash') => {
-    if (method === 'cash') {
+  const handleSelectMethod = (method: 'Chuyển khoản' | 'Tiền mặt') => {
+    if (method === 'Tiền mặt') {
       // Thanh toán tiền mặt - tạo payment ngay
       handleCashPayment();
     } else {
@@ -56,14 +57,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     try {
       setProcessing(true);
       
+      const getItemLabel = () => {
+        if (itemType === 'class') return 'lớp học';
+        if (itemType === 'service') return 'dịch vụ';
+        return 'thẻ thành viên';
+      };
+
       const paymentData = {
         userId,
         amount,
-        method: 'cash',
+        method: 'Tiền mặt',
         status: 'pending',
-        description: `Thanh toán ${itemType === 'class' ? 'lớp học' : 'thẻ thành viên'}: ${itemName}`,
+        description: `Thanh toán ${getItemLabel()}: ${itemName}`,
         ...(itemType === 'class' && { classId: itemId }),
         ...(itemType === 'membership' && { membershipId: itemId }),
+        ...(itemType === 'service' && { serviceId: itemId }),
       };
 
       await apiService.post('/payments', paymentData);
@@ -92,14 +100,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     try {
       setProcessing(true);
       
+      const getItemLabel = () => {
+        if (itemType === 'class') return 'lớp học';
+        if (itemType === 'service') return 'dịch vụ';
+        return 'thẻ thành viên';
+      };
+
       const paymentData = {
         userId,
         amount,
-        method: 'bank',
+        method: 'Chuyển khoản',
         status: 'pending',
-        description: `Thanh toán ${itemType === 'class' ? 'lớp học' : 'thẻ thành viên'}: ${itemName}`,
+        description: `Thanh toán ${getItemLabel()}: ${itemName}`,
         ...(itemType === 'class' && { classId: itemId }),
         ...(itemType === 'membership' && { membershipId: itemId }),
+        ...(itemType === 'service' && { serviceId: itemId }),
       };
 
       await apiService.post('/payments', paymentData);
@@ -157,7 +172,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   <Text style={styles.orderInfoTitle}>Thông tin đơn hàng</Text>
                   <View style={styles.orderInfoRow}>
                     <Text style={styles.orderInfoLabel}>
-                      {itemType === 'class' ? 'Lớp học:' : 'Thẻ thành viên:'}
+                      {itemType === 'class' ? 'Lớp học:' : itemType === 'service' ? 'Dịch vụ:' : 'Gói tập:'}
                     </Text>
                     <Text style={styles.orderInfoValue}>{itemName}</Text>
                   </View>
@@ -173,11 +188,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
                 <TouchableOpacity
                   style={styles.methodCard}
-                  onPress={() => handleSelectMethod('bank')}
+                  onPress={() => handleSelectMethod('Chuyển khoản')}
                   disabled={processing}
                 >
-                  <View style={styles.methodIcon}>
-                    <Text style={styles.methodIconText}>🏦</Text>
+                  <View style={[styles.methodIcon, styles.bankIconBg]}>
+                    <Icon name="card" size={28} color="#2196F3" />
                   </View>
                   <View style={styles.methodInfo}>
                     <Text style={styles.methodName}>Chuyển khoản ngân hàng</Text>
@@ -185,16 +200,16 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                       Chuyển khoản qua Vietcombank
                     </Text>
                   </View>
-                  <Text style={styles.methodArrow}>→</Text>
+                  <Icon name="arrow-forward" size={24} color="#007AFF" />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.methodCard}
-                  onPress={() => handleSelectMethod('cash')}
+                  onPress={() => handleSelectMethod('Tiền mặt')}
                   disabled={processing}
                 >
-                  <View style={styles.methodIcon}>
-                    <Text style={styles.methodIconText}>💵</Text>
+                  <View style={[styles.methodIcon, styles.cashIconBg]}>
+                    <Icon name="cash" size={28} color="#4CAF50" />
                   </View>
                   <View style={styles.methodInfo}>
                     <Text style={styles.methodName}>Thanh toán tiền mặt</Text>
@@ -202,7 +217,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                       Thanh toán trực tiếp tại quầy
                     </Text>
                   </View>
-                  <Text style={styles.methodArrow}>→</Text>
+                  <Icon name="arrow-forward" size={24} color="#007AFF" />
                 </TouchableOpacity>
               </View>
             )}
@@ -220,7 +235,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                       <TouchableOpacity
                         onPress={() => copyToClipboard(BANK_INFO.bankName, 'Tên ngân hàng')}
                       >
-                        <Text style={styles.copyIcon}>📋</Text>
+                        <Icon name="clipboard-outline" size={20} color="#FF6B35" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -232,7 +247,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                       <TouchableOpacity
                         onPress={() => copyToClipboard(BANK_INFO.accountNumber, 'Số tài khoản')}
                       >
-                        <Text style={styles.copyIcon}>📋</Text>
+                        <Icon name="clipboard-outline" size={20} color="#FF6B35" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -244,7 +259,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                       <TouchableOpacity
                         onPress={() => copyToClipboard(BANK_INFO.accountName, 'Chủ tài khoản')}
                       >
-                        <Text style={styles.copyIcon}>📋</Text>
+                        <Icon name="clipboard-outline" size={20} color="#FF6B35" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -258,7 +273,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                       <TouchableOpacity
                         onPress={() => copyToClipboard(amount.toString(), 'Số tiền')}
                       >
-                        <Text style={styles.copyIcon}>📋</Text>
+                        <Icon name="clipboard-outline" size={20} color="#FF6B35" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -267,24 +282,29 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     <Text style={styles.bankInfoLabel}>Nội dung:</Text>
                     <View style={styles.bankInfoValueContainer}>
                       <Text style={styles.bankInfoValue}>
-                        {itemType === 'class' ? `LOPHOC ${itemId}` : `THANHVIEN ${itemId}`}
+                        {itemType === 'class' && `LOPHOC ${itemId}`}
+                        {itemType === 'membership' && `THANHVIEN ${itemId}`}
+                        {itemType === 'service' && `DICHVU ${itemId}`}
                       </Text>
                       <TouchableOpacity
-                        onPress={() =>
-                          copyToClipboard(
-                            itemType === 'class' ? `LOPHOC ${itemId}` : `THANHVIEN ${itemId}`,
-                            'Nội dung'
-                          )
-                        }
+                        onPress={() => {
+                          const content = itemType === 'class' ? `LOPHOC ${itemId}` : 
+                                        itemType === 'service' ? `DICHVU ${itemId}` : 
+                                        `THANHVIEN ${itemId}`;
+                          copyToClipboard(content, 'Nội dung');
+                        }}
                       >
-                        <Text style={styles.copyIcon}>📋</Text>
+                        <Icon name="clipboard-outline" size={20} color="#FF6B35" />
                       </TouchableOpacity>
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.noteCard}>
-                  <Text style={styles.noteTitle}>⚠️ Lưu ý quan trọng</Text>
+                  <View style={styles.noteTitleContainer}>
+                    <Icon name="warning" size={16} color="#856404" />
+                    <Text style={styles.noteTitle}>Lưu ý quan trọng</Text>
+                  </View>
                   <Text style={styles.noteText}>
                     • Vui lòng chuyển khoản đúng số tiền và nội dung để được xử lý nhanh chóng
                   </Text>
@@ -419,8 +439,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  methodIconText: {
-    fontSize: 24,
+  bankIconBg: {
+    backgroundColor: '#E3F2FD',
+  },
+  cashIconBg: {
+    backgroundColor: '#E8F5E9',
   },
   methodInfo: {
     flex: 1,
@@ -488,11 +511,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 20,
   },
+  noteTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 6,
+  },
   noteTitle: {
     fontSize: 14,
     fontWeight: 'bold',
     color: '#856404',
-    marginBottom: 8,
   },
   noteText: {
     fontSize: 13,

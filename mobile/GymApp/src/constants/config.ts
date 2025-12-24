@@ -46,6 +46,9 @@ export const CONFIG = {
       CHECKIN: '/attendance/checkin',
       MY_ATTENDANCE: '/attendance/my-attendance',
     },
+    CALENDAR: {
+      USER_EVENTS: '/calendar/user',
+    },
   },
 };
 

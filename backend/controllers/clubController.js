@@ -14,6 +14,28 @@ export const getAllClubs = async (req, res) => {
   }
 };
 
+// Lấy chi tiết CLB theo ID
+export const getClubById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const club = await Club.findById(id);
+    
+    if (!club) {
+      return res.status(404).json({
+        message: "Không tìm thấy CLB",
+      });
+    }
+    
+    res.status(200).json(club);
+  } catch (error) {
+    console.error("Error fetching club detail:", error);
+    res.status(500).json({
+      message: "Lỗi khi lấy chi tiết CLB",
+      error: error.message,
+    });
+  }
+};
+
 // Thêm CLB mới
 export const createClub = async (req, res) => {
   try {

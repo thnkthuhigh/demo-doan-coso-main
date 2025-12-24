@@ -7,7 +7,16 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  register: (
+    username: string,
+    fullName: string,
+    email: string,
+    password: string,
+    phone: string,
+    address: string,
+    dob: string,
+    gender: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   updateUser: (updatedUser: User) => Promise<void>;
@@ -26,14 +35,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAuth = async () => {
     try {
+      setIsLoading(true);
       const token = await authService.getStoredToken();
+      console.log('checkAuth - Token exists:', !!token);
+      
       if (token) {
-        const storedUser = await authService.getStoredUser();
-        setUser(storedUser);
-        setIsAuthenticated(true);
+        // Try to get profile from server to verify token
+        try {
+          const userData = await authService.getProfile();
+          console.log('checkAuth - Profile fetched successfully:', userData);
+          setUser(userData);
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error('checkAuth - Profile fetch failed, token may be invalid:', error);
+          // Token is invalid, clear storage
+          await authService.logout();
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } else {
+        console.log('checkAuth - No token found');
+        setUser(null);
+        setIsAuthenticated(false);
       }
     } catch (error) {
       console.error('Check auth error:', error);
+      setUser(null);
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
@@ -49,9 +77,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (name: string, email: string, password: string, phone?: string) => {
+  const register = async (
+    username: string,
+    fullName: string,
+    email: string,
+    password: string,
+    phone: string,
+    address: string,
+    dob: string,
+    gender: string
+  ) => {
     try {
-      const response = await authService.register(name, email, password, phone);
+      const response = await authService.register(
+        username,
+        fullName,
+        email,
+        password,
+        phone,
+        address,
+        dob,
+        gender
+      );
       setUser(response.user);
       setIsAuthenticated(true);
     } catch (error) {

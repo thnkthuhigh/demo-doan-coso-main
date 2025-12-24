@@ -161,27 +161,90 @@ export const updateClassSession = async (req, res) => {
 // Điểm danh học viên
 export const markAttendance = async (req, res) => {
   try {
-    const { classId, userId, sessionNumber, isPresent, notes } = req.body;
+    console.log("=== MARK ATTENDANCE REQUEST ===");
+    console.log("Request body:", req.body);
+    
+    const { classId, userId, sessionNumber, sessionDate, isPresent, notes } = req.body;
+
+    // Validate required fields
+    if (!classId || !userId || !sessionNumber) {
+      console.log("Missing required fields:", { classId, userId, sessionNumber });
+      return res.status(400).json({ 
+        message: "Thiếu thông tin bắt buộc: classId, userId, sessionNumber" 
+      });
+    }
+
+    // Validate classId
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      console.log("Invalid classId:", classId);
+      return res.status(400).json({ message: "Class ID không hợp lệ" });
+    }
 
     // Validate userId
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      console.log("Invalid userId:", userId);
       return res.status(400).json({ message: "User ID không hợp lệ" });
     }
 
+    // Kiểm tra xem attendance đã tồn tại và đã bị khóa chưa
+    const existingAttendance = await Attendance.findOne({
+      classId: new mongoose.Types.ObjectId(classId),
+      userId: new mongoose.Types.ObjectId(userId),
+      sessionNumber: parseInt(sessionNumber)
+    });
+
+    // Nếu đã điểm danh và bị khóa thì không cho điểm danh lại
+    if (existingAttendance && existingAttendance.isLocked) {
+      console.log("Attendance is locked, cannot update");
+      return res.status(403).json({ 
+        message: "Điểm danh đã bị khóa, không thể chỉnh sửa",
+        attendance: existingAttendance
+      });
+    }
+
+    console.log("Updating attendance:", {
+      classId,
+      userId,
+      sessionNumber,
+      sessionDate,
+      isPresent
+    });
+
+    const updateData = {
+      isPresent: isPresent === true || isPresent === "true",
+      checkinTime: isPresent ? new Date() : null,
+      notes: notes || "",
+      // KHÔNG khóa ngay - chỉ khóa khi gọi API lock-session
+    };
+
+    // Add sessionDate if provided
+    if (sessionDate) {
+      updateData.sessionDate = new Date(sessionDate);
+    }
+
     const attendance = await Attendance.findOneAndUpdate(
-      { classId, userId, sessionNumber },
-      {
-        isPresent,
-        checkinTime: isPresent ? new Date() : null,
-        notes: notes || "",
+      { 
+        classId: new mongoose.Types.ObjectId(classId),
+        userId: new mongoose.Types.ObjectId(userId),
+        sessionNumber: parseInt(sessionNumber)
       },
+      updateData,
       { new: true, upsert: true }
     );
 
-    res.json({ message: "Điểm danh thành công", attendance });
+    console.log("Attendance updated:", attendance);
+
+    res.json({ 
+      message: "Điểm danh thành công", 
+      attendance
+    });
   } catch (error) {
     console.error("Error marking attendance:", error);
-    res.status(500).json({ message: "Lỗi server khi điểm danh" });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ 
+      message: "Lỗi server khi điểm danh",
+      error: error.message 
+    });
   }
 };
 

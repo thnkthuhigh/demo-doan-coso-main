@@ -1,0 +1,8 @@
+@echo off
+echo ========================================
+echo  Web Client (Port 5173)
+echo ========================================
+echo.
+cd /d "%~dp0"
+npm run dev
+pause

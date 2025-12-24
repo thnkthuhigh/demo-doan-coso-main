@@ -49,7 +49,7 @@ export const signup = async (req, res) => {
 
     // Generate token for auto login after register
     const token = jwt.sign(
-      { id: newUser._id, email: newUser.email },
+      { userId: newUser._id, email: newUser.email },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
@@ -124,5 +124,41 @@ export const login = async (req, res) => {
     res
       .status(500)
       .json({ message: "Đăng nhập thất bại", error: error.message });
+  }
+};
+
+// Get user profile
+export const getProfile = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.userId;
+    
+    const user = await User.findById(userId).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: "User không tồn tại" });
+    }
+
+    res.json({
+      user: {
+        _id: user._id,
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+        membership: user.membership,
+        phone: user.phone,
+        gender: user.gender,
+        dob: user.dob,
+        address: user.address,
+        avatar: user.avatar,
+        notificationPreferences: user.notificationPreferences,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Get profile error:", error);
+    res.status(500).json({ message: "Lỗi khi lấy thông tin profile", error: error.message });
   }
 };

@@ -7,8 +7,15 @@ import Class from "../models/Class.js";
 
 export const createPayment = async (req, res) => {
   try {
-    const { amount, method, registrationIds, paymentType = "class" } = req.body;
-    const userId = req.user._id;
+    const { amount, method, registrationIds, paymentType = "class", autoComplete = false, userId: bodyUserId } = req.body;
+    
+    // Get userId from authentication or body (fallback for compatibility)
+    const userId = req.user?._id || bodyUserId;
+    
+    if (!userId) {
+      console.error("User not authenticated:", req.user);
+      return res.status(401).json({ message: "Bạn cần đăng nhập để thanh toán" });
+    }
 
     console.log("Creating payment:", {
       amount,
@@ -16,6 +23,8 @@ export const createPayment = async (req, res) => {
       registrationIds,
       paymentType,
       userId,
+      autoComplete,
+      reqBody: req.body,
     });
 
     // Validate registrationIds
@@ -32,11 +41,21 @@ export const createPayment = async (req, res) => {
       method,
       registrationIds,
       paymentType,
-      status: "pending",
+      status: autoComplete ? "completed" : "pending",
+      completedAt: autoComplete ? new Date() : null,
       createdAt: new Date(),
     });
 
     await payment.save();
+
+    // Nếu autoComplete = true, tự động update paymentStatus của enrollments
+    if (autoComplete && paymentType === "class") {
+      await ClassEnrollment.updateMany(
+        { _id: { $in: registrationIds } },
+        { $set: { paymentStatus: true } }
+      );
+      console.log("Auto-updated paymentStatus for enrollments:", registrationIds);
+    }
 
     res.status(201).json({
       message: "Tạo yêu cầu thanh toán thành công",
@@ -44,7 +63,11 @@ export const createPayment = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating payment:", error);
-    res.status(500).json({ message: "Lỗi server khi tạo thanh toán" });
+    console.error("Error details:", error.message, error.stack);
+    res.status(500).json({ 
+      message: "Lỗi server khi tạo thanh toán",
+      error: error.message 
+    });
   }
 };
 
@@ -112,8 +135,18 @@ export const approvePayment = async (req, res) => {
           if (classEnrollment) {
             // Cập nhật trạng thái thanh toán cho ClassEnrollment
             classEnrollment.paymentStatus = true;
+            classEnrollment.expiresAt = null; // Xóa expiry vì đã thanh toán
             await classEnrollment.save();
             console.log("Updated ClassEnrollment:", regId);
+            
+            // Cập nhật currentMembers của Class
+            if (classEnrollment.class) {
+              await Class.findByIdAndUpdate(
+                classEnrollment.class,
+                { $inc: { currentMembers: 1 } }
+              );
+              console.log("Increased currentMembers for class:", classEnrollment.class);
+            }
           } else {
             // Kiểm tra xem có phải Membership không
             const membership = await Membership.findById(regId);
@@ -164,6 +197,15 @@ export const rejectPayment = async (req, res) => {
     payment.status = "cancelled";
     payment.rejectionReason = rejectionReason || "Admin từ chối thanh toán";
     await payment.save();
+
+    // Send notification to user about rejection
+    await sendNotification(
+      payment.user,
+      "payment",
+      "Thanh toán bị từ chối ❌",
+      `Thanh toán của bạn đã bị từ chối. Lý do: ${payment.rejectionReason}. Bạn có thể thanh toán lại từ giỏ hàng.`,
+      { paymentId: payment._id, amount: payment.amount, rejectionReason: payment.rejectionReason }
+    );
 
     res.json({
       message: "Từ chối thanh toán thành công",

@@ -22,9 +22,12 @@ import UserProfile from "./components/Users";
 import MembershipPage from "./components/Membership";
 import AdminLayout from "./components/Admin/AdminLayout";
 import AdminDashboard from "./components/Admin/Dashboard";
+import TrainerLayout from "./components/Trainer/TrainerLayout";
+import TrainerDashboard from "./components/Trainer/TrainerDashboard";
 import ViewClasses from "./components/Classes/index";
 import UserClasses from "./components/Classes/UserClasses";
 import ClassDetails from "./components/Classes/ClassDetails";
+import StudentAttendance from "./components/Student/StudentAttendance";
 import ScrollToTop from "./components/common/ScrollToTop";
 
 // Import Japanese theme thay vì vintage
@@ -88,7 +91,9 @@ function App() {
 // Component riêng để xử lý location
 function AppContent({ user, setUser }) {
   const location = useLocation();
-  const isLoginPage = location.pathname === '/login';
+  const isLoginPage = location.pathname === "/login";
+  const isAdminPage = location.pathname.startsWith("/admin");
+  const isTrainerPage = location.pathname.startsWith("/trainer");
 
   return (
     <div className="app-container flex flex-col min-h-screen relative">
@@ -97,8 +102,8 @@ function AppContent({ user, setUser }) {
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-300 to-transparent z-50"></div>
       )}
 
-      {/* Navigation với Japanese style - Ẩn trên trang Login */}
-      {!isLoginPage && <JapaneseNav user={user} setUser={setUser} />}
+      {/* Navigation với Japanese style - Ẩn trên trang Login, Admin và Trainer */}
+      {!isLoginPage && !isAdminPage && !isTrainerPage && <JapaneseNav user={user} setUser={setUser} />}
 
       {/* Main Content - BỎ padding-top */}
       <main className="flex-1 relative">
@@ -123,6 +128,7 @@ function AppContent({ user, setUser }) {
           <Route path="/classes" element={<ViewClasses />} />
           <Route path="/my-classes" element={<UserClasses />} />
           <Route path="/classes/:id/details" element={<ClassDetails />} />
+          <Route path="/attendance" element={<StudentAttendance />} />
 
           {/* Admin routes với Japanese styling */}
           <Route
@@ -136,12 +142,24 @@ function AppContent({ user, setUser }) {
             }
           />
 
+          {/* Trainer routes */}
+          <Route
+            path="/trainer/*"
+            element={
+              <div className="min-h-screen bg-gray-50">
+                <TrainerLayout>
+                  <TrainerDashboard />
+                </TrainerLayout>
+              </div>
+            }
+          />
+
           {/* Legacy admin routes */}
           <Route path="/qlclb" element={<AdminClubManager />} />
           <Route path="/qldv" element={<AdminServiceManager />} />
 
           {/* Default admin route */}
-          <Route path="/admin" element={<Navigate to="/admin" replace />} />
+          <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
 
           {/* 404 Route với Japanese style */}
           <Route
@@ -176,8 +194,8 @@ function AppContent({ user, setUser }) {
         )}
       </main>
 
-      {/* Footer với Japanese style - Ẩn trên trang Login */}
-      {!isLoginPage && <JapaneseFooter />}
+      {/* Footer với Japanese style - Ẩn trên trang Login, Admin và Trainer */}
+      {!isLoginPage && !isAdminPage && !isTrainerPage && <JapaneseFooter />}
 
       {/* Bottom border - chỉ hiện khi không phải Login */}
       {!isLoginPage && (

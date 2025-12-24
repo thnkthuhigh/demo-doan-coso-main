@@ -77,6 +77,7 @@ const JapaneseNav = ({ user, setUser }) => {
         { name: "Dịch Vụ", path: "/services" },
         { name: "Lớp Học", path: "/classes" },
         { name: "Lịch Của Tôi", path: "/my-classes" },
+        { name: "Điểm Danh", path: "/attendance" },
         { name: "Thẻ Thành Viên", path: "/membership" },
         { name: "Thanh Toán", path: "/payment" },
       ];
@@ -228,6 +229,8 @@ const JapaneseNav = ({ user, setUser }) => {
                             ? "Lớp Học"
                             : item.name === "Lịch Của Tôi"
                             ? "Lịch"
+                            : item.name === "Điểm Danh"
+                            ? "Điểm Danh"
                             : item.name === "Thẻ Thành Viên"
                             ? "Thành Viên"
                             : item.name === "Thanh Toán"

@@ -86,6 +86,39 @@ const ChatDetailScreen = ({ route, navigation }: any) => {
     });
   };
 
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Check if it's today
+    if (date.toDateString() === today.toDateString()) {
+      return date.toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+    
+    // Check if it's yesterday
+    if (date.toDateString() === yesterday.toDateString()) {
+      return 'Hôm qua ' + date.toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+    
+    // Other dates - show full date
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }) + ' ' + date.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwnMessage = item.sender._id === ((user as any)?._id || (user as any)?.id);
 
@@ -121,7 +154,7 @@ const ChatDetailScreen = ({ route, navigation }: any) => {
               {item.content}
             </Text>
             <Text style={[styles.messageTime, isOwnMessage && styles.ownMessageTime]}>
-              {formatTime(item.createdAt)}
+              {formatDateTime(item.createdAt)}
             </Text>
           </View>
         </View>

@@ -15,6 +15,11 @@ const classSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    instructor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+    },
     instructorName: {
       type: String,
     },

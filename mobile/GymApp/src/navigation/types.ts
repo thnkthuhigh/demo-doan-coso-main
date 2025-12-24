@@ -11,15 +11,19 @@ export type RootStackParamList = {
   Notifications: undefined;
   Statistics: undefined;
   Calendar: undefined;
-  Goals: undefined;
   QRScanner: undefined;
   ChatList: undefined;
   ChatDetail: { conversationId: string };
   GymFinder: undefined;
   BodyMetrics: undefined;
+  Cart: undefined;
   EditProfile: undefined;
   ChangePassword: undefined;
   Settings: undefined;
+  TrainerClasses: undefined;
+  AttendanceManagement: { classId: string; className: string };
+  AttendanceHistory: { classId?: string; className?: string };
+  AttendanceDetail: { classId: string; className: string; date: string };
 };
 
 export type AuthStackParamList = {

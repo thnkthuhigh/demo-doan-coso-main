@@ -23,6 +23,7 @@ import {
 export default function ClassManagement() {
   const [classes, setClasses] = useState([]);
   const [services, setServices] = useState([]);
+  const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
@@ -37,6 +38,7 @@ export default function ClassManagement() {
     className: "",
     serviceId: "",
     serviceName: "",
+    instructorId: "",
     instructorName: "",
     description: "",
     maxMembers: 20,
@@ -63,21 +65,37 @@ export default function ClassManagement() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    console.log("Classes state updated:", classes.length, "classes");
+    console.log("First class:", classes[0]);
+  }, [classes]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [classesRes, servicesRes] = await Promise.all([
+      const token = localStorage.getItem("token");
+      const [classesRes, servicesRes, trainersRes] = await Promise.all([
         axios.get("http://localhost:5000/api/classes"),
         axios.get("http://localhost:5000/api/services"),
+        axios.get("http://localhost:5000/api/users", {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { role: "trainer" },
+        }),
       ]);
+
+      console.log("Classes fetched:", classesRes.data);
+      console.log("Services fetched:", servicesRes.data);
+      console.log("Trainers fetched:", trainersRes.data);
 
       setClasses(classesRes.data || []);
       setServices(servicesRes.data || []);
+      setTrainers(trainersRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       showNotification("❌ Không thể tải dữ liệu", "error");
       setClasses([]);
       setServices([]);
+      setTrainers([]);
     } finally {
       setLoading(false);
     }
@@ -93,6 +111,22 @@ export default function ClassManagement() {
         return;
       }
 
+      // Validate required fields
+      if (!formData.serviceId) {
+        showNotification("❌ Vui lòng chọn dịch vụ", "error");
+        return;
+      }
+
+      if (!formData.className) {
+        showNotification("❌ Vui lòng nhập tên lớp học", "error");
+        return;
+      }
+
+      if (!formData.startDate || !formData.endDate) {
+        showNotification("❌ Vui lòng chọn ngày bắt đầu và kết thúc", "error");
+        return;
+      }
+
       const submitData = {
         ...formData,
         serviceId: formData.serviceId, // Gửi serviceId để backend xử lý
@@ -100,6 +134,8 @@ export default function ClassManagement() {
         totalSessions: parseInt(formData.totalSessions),
         price: parseInt(formData.price),
       };
+
+      console.log("Submitting class data:", submitData);
 
       if (editingClass) {
         await axios.put(
@@ -109,9 +145,10 @@ export default function ClassManagement() {
         );
         showNotification("✅ Cập nhật lớp học thành công!");
       } else {
-        await axios.post("http://localhost:5000/api/classes", submitData, {
+        const response = await axios.post("http://localhost:5000/api/classes", submitData, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        console.log("Class created:", response.data);
         showNotification("✅ Thêm lớp học thành công!");
       }
 
@@ -119,7 +156,8 @@ export default function ClassManagement() {
       resetForm();
     } catch (error) {
       console.error("Error saving class:", error);
-      const errorMessage = error.response?.data?.message || "Có lỗi xảy ra";
+      console.error("Error response:", error.response?.data);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Có lỗi xảy ra";
       showNotification(`❌ ${errorMessage}`, "error");
     }
   };
@@ -148,6 +186,7 @@ export default function ClassManagement() {
       className: "",
       serviceId: "",
       serviceName: "",
+      instructorId: "",
       instructorName: "",
       description: "",
       maxMembers: 20,
@@ -166,7 +205,8 @@ export default function ClassManagement() {
   const handleEdit = (classItem) => {
     setFormData({
       ...classItem,
-      serviceId: classItem.service?._id || classItem.service || "", // Xử lý cả trường hợp populated và không populated
+      serviceId: classItem.service?._id || classItem.service || "",
+      instructorId: classItem.instructor?._id || classItem.instructor || "",
       startDate: classItem.startDate
         ? new Date(classItem.startDate).toISOString().split("T")[0]
         : "",
@@ -281,14 +321,20 @@ export default function ClassManagement() {
 
   // Filter classes
   const filteredClasses = classes.filter((cls) => {
+    const className = cls.className || cls.name || "";
+    const instructorName = cls.instructorName || cls.instructor?.fullName || "";
+    const serviceName = cls.serviceName || "";
+    
     const matchesSearch =
-      cls.className?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cls.instructorName?.toLowerCase().includes(searchTerm.toLowerCase());
+      className.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      instructorName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = !statusFilter || cls.status === statusFilter;
-    const matchesService = !serviceFilter || cls.serviceName === serviceFilter;
+    const matchesService = !serviceFilter || serviceName === serviceFilter;
 
     return matchesSearch && matchesStatus && matchesService;
   });
+
+  console.log("Filtered classes:", filteredClasses.length, "of", classes.length);
 
   if (loading) {
     return (
@@ -445,19 +491,30 @@ export default function ClassManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Huấn luyện viên
+                      Huấn luyện viên *
                     </label>
-                    <input
-                      type="text"
-                      value={formData.instructorName}
-                      onChange={(e) =>
+                    <select
+                      value={formData.instructorId}
+                      onChange={(e) => {
+                        const selectedTrainer = trainers.find(
+                          (t) => t._id === e.target.value
+                        );
                         setFormData({
                           ...formData,
-                          instructorName: e.target.value,
-                        })
-                      }
+                          instructorId: e.target.value,
+                          instructorName: selectedTrainer?.fullName || "",
+                        });
+                      }}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                      required
+                    >
+                      <option value="">Chọn huấn luyện viên</option>
+                      {trainers.map((trainer) => (
+                        <option key={trainer._id} value={trainer._id}>
+                          {trainer.fullName} ({trainer.email})
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
@@ -676,7 +733,7 @@ export default function ClassManagement() {
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-semibold text-gray-800 line-clamp-2">
-                  {classItem.className}
+                  {classItem.className || classItem.name || "Không có tên"}
                 </h3>
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
@@ -694,12 +751,12 @@ export default function ClassManagement() {
                 </div>
                 <div className="flex items-center">
                   <User size={16} className="mr-2 text-gray-400" />
-                  <span>{classItem.instructorName || "Chưa có HLV"}</span>
+                  <span>{classItem.instructorName || classItem.instructor?.fullName || "Chưa có HLV"}</span>
                 </div>
                 <div className="flex items-center">
                   <Users size={16} className="mr-2 text-gray-400" />
                   <span>
-                    {classItem.currentMembers || 0}/{classItem.maxMembers} học
+                    {classItem.currentMembers || classItem.enrolled || 0}/{classItem.maxMembers || classItem.capacity || 0} học
                     viên
                   </span>
                 </div>

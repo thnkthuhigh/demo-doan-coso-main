@@ -81,7 +81,12 @@ const ServicesScreen = ({ navigation }: any) => {
   }, [services, searchQuery, selectedCategory]);
 
   const handleServicePress = (service: Service) => {
-    navigation.navigate('ServiceDetail', { serviceId: service._id });
+    // Navigate to Classes tab with service filter
+    console.log('🎯 Navigating to Classes with service:', service._id, service.name);
+    navigation.navigate('Classes', {
+      selectedService: service._id,
+      serviceName: service.name,
+    });
   };
 
   const renderServiceCard = (service: Service, index: number) => {
@@ -117,7 +122,7 @@ const ServicesScreen = ({ navigation }: any) => {
               {service.description}
             </Text>
             <View style={styles.viewDetailsButton}>
-              <Text style={styles.viewDetailsText}>Xem chi tiết →</Text>
+              <Text style={styles.viewDetailsText}>Xem lớp học →</Text>
             </View>
           </View>
         </LinearGradient>
@@ -136,66 +141,8 @@ const ServicesScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#581c87', '#1e40af', '#047857']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <Text style={styles.headerTitle}>💎 DỊCH VỤ</Text>
-        <Text style={styles.headerSubtitle}>
-          Khám phá các dịch vụ cao cấp
-        </Text>
-      </LinearGradient>
-
-      <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Tìm kiếm dịch vụ..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor="rgba(255, 255, 255, 0.5)"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Text style={styles.clearIcon}>✕</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoriesContainer}
-        contentContainerStyle={styles.categoriesContent}
-      >
-        {CATEGORIES.map((category) => (
-          <TouchableOpacity
-            key={category.id}
-            onPress={() => setSelectedCategory(category.id)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={selectedCategory === category.id ? category.colors : ['#1e1b4b', '#1e1b4b']}
-              style={styles.categoryChip}
-            >
-              <Text style={styles.categoryIcon}>{category.icon}</Text>
-              <Text style={styles.categoryText}>{category.name}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      <View style={styles.resultsContainer}>
-        <Text style={styles.resultsText}>
-          🎯 Tìm thấy {filteredServices.length} dịch vụ
-        </Text>
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.mainScrollContent}
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 
@@ -204,15 +151,62 @@ const ServicesScreen = ({ navigation }: any) => {
           />
         }
       >
-        {filteredServices.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyText}>Không tìm thấy dịch vụ nào</Text>
-            <Text style={styles.emptySubtext}>Thử tìm kiếm với từ khóa khác</Text>
-          </View>
-        ) : (
-          filteredServices.map((service, index) => renderServiceCard(service, index))
-        )}
+        <View style={styles.searchContainer}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Tìm kiếm dịch vụ..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Text style={styles.clearIcon}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoriesContainer}
+          contentContainerStyle={styles.categoriesContent}
+        >
+          {CATEGORIES.map((category) => (
+            <TouchableOpacity
+              key={category.id}
+              onPress={() => setSelectedCategory(category.id)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={selectedCategory === category.id ? category.colors : ['#1e1b4b', '#1e1b4b']}
+                style={styles.categoryChip}
+              >
+                <Text style={styles.categoryIcon}>{category.icon}</Text>
+                <Text style={styles.categoryText}>{category.name}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <View style={styles.resultsContainer}>
+          <Text style={styles.resultsText}>
+            🎯 Tìm thấy {filteredServices.length} dịch vụ
+          </Text>
+        </View>
+
+        <View style={styles.servicesContainer}>
+          {filteredServices.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>🔍</Text>
+              <Text style={styles.emptyText}>Không tìm thấy dịch vụ nào</Text>
+              <Text style={styles.emptySubtext}>Thử tìm kiếm với từ khóa khác</Text>
+            </View>
+          ) : (
+            filteredServices.map((service, index) => renderServiceCard(service, index))
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -234,34 +228,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
   },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+  mainScrollContent: {
+    paddingTop: 16,
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#fff',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
+  servicesContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   serviceCard: {
     borderRadius: 20,
@@ -287,7 +259,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 48,
   },
   serviceName: {
     fontSize: 24,
@@ -339,7 +311,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1e1b4b',
     marginHorizontal: 16,
-    marginTop: 16,
     marginBottom: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -366,7 +337,7 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   categoriesContent: {
     paddingRight: 16,
@@ -395,7 +366,8 @@ const styles = StyleSheet.create({
   },
   resultsContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingTop: 4,
+    paddingBottom: 12,
   },
   resultsText: {
     fontSize: 14,

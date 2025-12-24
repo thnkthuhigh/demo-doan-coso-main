@@ -58,14 +58,90 @@ export default function ClassDetails() {
   const [enrolling, setEnrolling] = useState(false);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) {
-      setUser(JSON.parse(userData));
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      if (parsedUser._id) {
+        checkEnrollmentStatus(parsedUser._id);
+      }
     }
     fetchClassDetails();
   }, [id]);
+
+  const checkEnrollmentStatus = async (userId) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await axios.get(
+        `http://localhost:5000/api/classes/user/${userId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const enrolled = response.data.some(
+        (enrollment) => enrollment.class?._id === id
+      );
+      setIsEnrolled(enrolled);
+
+      if (enrolled) {
+        fetchAttendanceHistory(userId);
+      }
+    } catch (error) {
+      console.error("Error checking enrollment:", error);
+    }
+  };
+
+  const fetchAttendanceHistory = async (userId) => {
+    try {
+      setLoadingAttendance(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `http://localhost:5000/api/attendance/student/${userId}/class/${id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAttendanceHistory(response.data || []);
+    } catch (error) {
+      console.error("Error fetching attendance:", error);
+      setAttendanceHistory([]);
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
+  // Generate detailed schedule dates
+  const generateScheduleDates = () => {
+    if (!classData?.schedule || !classData?.startDate || !classData?.endDate) {
+      return [];
+    }
+
+    const dates = [];
+    const start = new Date(classData.startDate);
+    const end = new Date(classData.endDate);
+    const scheduleDays = classData.schedule.map(s => s.dayOfWeek);
+
+    let currentDate = new Date(start);
+    while (currentDate <= end) {
+      const dayOfWeek = currentDate.getDay();
+      if (scheduleDays.includes(dayOfWeek)) {
+        const scheduleInfo = classData.schedule.find(s => s.dayOfWeek === dayOfWeek);
+        dates.push({
+          date: new Date(currentDate),
+          dayOfWeek,
+          startTime: scheduleInfo?.startTime,
+          endTime: scheduleInfo?.endTime,
+        });
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return dates;
+  };
 
   const fetchClassDetails = async () => {
     try {
@@ -100,8 +176,12 @@ export default function ClassDetails() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast.success("Đăng ký lớp học thành công!");
-      navigate("/my-classes");
+      toast.success("Đăng ký lớp học thành công! Chuyển đến giỏ hàng...");
+      
+      // Navigate to cart/payment page after brief delay
+      setTimeout(() => {
+        navigate("/payment");
+      }, 1500);
     } catch (error) {
       console.error("Error enrolling:", error);
       const errorMessage =
@@ -307,7 +387,13 @@ export default function ClassDetails() {
       ? ((classData.currentSession || 0) / classData.totalSessions) * 100
       : 0;
 
-  const tabs = [
+  const tabs = isEnrolled ? [
+    { id: "overview", label: "Tổng Quan", icon: Eye },
+    { id: "schedule", label: "Lịch Học", icon: Calendar },
+    { id: "attendance", label: "Điểm Danh", icon: CheckCircle },
+    { id: "benefits", label: "Lợi Ích", icon: Gift },
+    { id: "requirements", label: "Yêu Cầu", icon: Shield },
+  ] : [
     { id: "overview", label: "Tổng Quan", icon: Eye },
     { id: "schedule", label: "Lịch Học", icon: Calendar },
     { id: "benefits", label: "Lợi Ích", icon: Gift },
@@ -838,68 +924,101 @@ export default function ClassDetails() {
                       </h3>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-10">
-                      <div>
-                        <h4 className="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b-2 border-blue-200">
-                          Thời Gian Biểu
-                        </h4>
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200 rounded-2xl p-8 shadow-lg">
-                          <div className="text-blue-800 font-bold text-xl leading-relaxed">
-                            {formatSchedule(classData.schedule)}
-                          </div>
+                    <div className="grid md:grid-cols-3 gap-6 mb-8">
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-100 border-2 border-green-200 rounded-2xl p-6 shadow-lg">
+                        <div className="flex items-center mb-3">
+                          <Calendar className="h-6 w-6 text-green-600 mr-3" />
+                          <span className="text-sm font-bold text-green-700">
+                            Ngày Bắt Đầu
+                          </span>
+                        </div>
+                        <div className="text-green-800 font-bold text-xl">
+                          {new Date(classData.startDate).toLocaleDateString(
+                            "vi-VN"
+                          )}
                         </div>
                       </div>
 
-                      <div>
-                        <h4 className="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b-2 border-green-200">
-                          Thời Gian Khóa Học
-                        </h4>
-                        <div className="space-y-6">
-                          <div className="bg-gradient-to-r from-green-50 to-emerald-100 border-2 border-green-200 rounded-2xl p-6 shadow-lg">
-                            <div className="flex items-center mb-3">
-                              <Calendar className="h-6 w-6 text-green-600 mr-3" />
-                              <span className="text-sm font-bold text-green-700">
-                                Ngày Bắt Đầu
-                              </span>
-                            </div>
-                            <div className="text-green-800 font-bold text-xl">
-                              {new Date(classData.startDate).toLocaleDateString(
-                                "vi-VN"
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="bg-gradient-to-r from-red-50 to-rose-100 border-2 border-red-200 rounded-2xl p-6 shadow-lg">
-                            <div className="flex items-center mb-3">
-                              <Calendar className="h-6 w-6 text-red-600 mr-3" />
-                              <span className="text-sm font-bold text-red-700">
-                                Ngày Kết Thúc
-                              </span>
-                            </div>
-                            <div className="text-red-800 font-bold text-xl">
-                              {new Date(classData.endDate).toLocaleDateString(
-                                "vi-VN"
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="bg-gradient-to-r from-purple-50 to-violet-100 border-2 border-purple-200 rounded-2xl p-6 shadow-lg">
-                            <div className="flex items-center mb-3">
-                              <Timer className="h-6 w-6 text-purple-600 mr-3" />
-                              <span className="text-sm font-bold text-purple-700">
-                                Tổng Thời Gian
-                              </span>
-                            </div>
-                            <div className="text-purple-800 font-bold text-xl">
-                              {Math.ceil(
-                                (new Date(classData.endDate) -
-                                  new Date(classData.startDate)) /
-                                  (1000 * 60 * 60 * 24)
-                              )}{" "}
-                              ngày
-                            </div>
-                          </div>
+                      <div className="bg-gradient-to-r from-red-50 to-rose-100 border-2 border-red-200 rounded-2xl p-6 shadow-lg">
+                        <div className="flex items-center mb-3">
+                          <Calendar className="h-6 w-6 text-red-600 mr-3" />
+                          <span className="text-sm font-bold text-red-700">
+                            Ngày Kết Thúc
+                          </span>
                         </div>
+                        <div className="text-red-800 font-bold text-xl">
+                          {new Date(classData.endDate).toLocaleDateString(
+                            "vi-VN"
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-r from-purple-50 to-violet-100 border-2 border-purple-200 rounded-2xl p-6 shadow-lg">
+                        <div className="flex items-center mb-3">
+                          <Timer className="h-6 w-6 text-purple-600 mr-3" />
+                          <span className="text-sm font-bold text-purple-700">
+                            Tổng Số Buổi
+                          </span>
+                        </div>
+                        <div className="text-purple-800 font-bold text-xl">
+                          {generateScheduleDates().length} buổi
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b-2 border-blue-200">
+                        Lịch Trình Các Buổi Học
+                      </h4>
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200 rounded-2xl p-8 mb-6 shadow-lg">
+                        <div className="text-blue-800 font-bold text-xl leading-relaxed">
+                          {formatSchedule(classData.schedule)}
+                        </div>
+                      </div>
+
+                      <h4 className="text-xl font-bold text-gray-800 mb-4">
+                        Tất Cả Các Ngày Học ({generateScheduleDates().length} buổi)
+                      </h4>
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-2">
+                        {generateScheduleDates().map((dateInfo, index) => {
+                          const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+                          const isPast = dateInfo.date < new Date();
+                          return (
+                            <motion.div
+                              key={index}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.02 }}
+                              className={`p-4 rounded-xl border-2 ${
+                                isPast 
+                                  ? "bg-gray-50 border-gray-200" 
+                                  : "bg-blue-50 border-blue-200"
+                              } hover:shadow-md transition-all`}
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                                  isPast ? "bg-gray-200 text-gray-600" : "bg-blue-200 text-blue-700"
+                                }`}>
+                                  {dayNames[dateInfo.dayOfWeek]}
+                                </span>
+                                {isPast && (
+                                  <CheckCircle className="h-4 w-4 text-gray-400" />
+                                )}
+                              </div>
+                              <div className={`font-bold text-lg mb-1 ${
+                                isPast ? "text-gray-600" : "text-gray-800"
+                              }`}>
+                                {dateInfo.date.toLocaleDateString("vi-VN")}
+                              </div>
+                              <div className={`text-sm flex items-center ${
+                                isPast ? "text-gray-500" : "text-blue-600"
+                              }`}>
+                                <Clock className="h-3 w-3 mr-1" />
+                                {dateInfo.startTime} - {dateInfo.endTime}
+                              </div>
+                            </motion.div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -943,6 +1062,130 @@ export default function ClassDetails() {
                         </motion.div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {activeTab === "attendance" && isEnrolled && (
+                  <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-gray-200/50">
+                    <div className="flex items-center mb-8">
+                      <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center mr-4">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      </div>
+                      <h3 className="text-3xl font-bold text-gray-800">
+                        Lịch Sử Điểm Danh
+                      </h3>
+                    </div>
+
+                    {loadingAttendance ? (
+                      <div className="text-center py-20">
+                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+                        <p className="mt-4 text-gray-600">Đang tải dữ liệu...</p>
+                      </div>
+                    ) : attendanceHistory.length === 0 ? (
+                      <div className="text-center py-20">
+                        <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <AlertCircle className="h-10 w-10 text-gray-400" />
+                        </div>
+                        <h4 className="text-xl font-bold text-gray-700 mb-2">
+                          Chưa Có Dữ Liệu Điểm Danh
+                        </h4>
+                        <p className="text-gray-500">
+                          Lịch sử điểm danh của bạn sẽ hiển thị ở đây sau các buổi học
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="grid md:grid-cols-3 gap-6 mb-8">
+                          <div className="bg-gradient-to-r from-green-50 to-emerald-100 border-2 border-green-200 rounded-2xl p-6 shadow-lg">
+                            <div className="flex items-center mb-3">
+                              <CheckCircle className="h-6 w-6 text-green-600 mr-3" />
+                              <span className="text-sm font-bold text-green-700">
+                                Có Mặt
+                              </span>
+                            </div>
+                            <div className="text-green-800 font-bold text-3xl">
+                              {attendanceHistory.filter(a => a.status === "present").length}
+                            </div>
+                          </div>
+
+                          <div className="bg-gradient-to-r from-red-50 to-rose-100 border-2 border-red-200 rounded-2xl p-6 shadow-lg">
+                            <div className="flex items-center mb-3">
+                              <X className="h-6 w-6 text-red-600 mr-3" />
+                              <span className="text-sm font-bold text-red-700">
+                                Vắng Mặt
+                              </span>
+                            </div>
+                            <div className="text-red-800 font-bold text-3xl">
+                              {attendanceHistory.filter(a => a.status === "absent").length}
+                            </div>
+                          </div>
+
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-100 border-2 border-blue-200 rounded-2xl p-6 shadow-lg">
+                            <div className="flex items-center mb-3">
+                              <Activity className="h-6 w-6 text-blue-600 mr-3" />
+                              <span className="text-sm font-bold text-blue-700">
+                                Tỷ Lệ Tham Gia
+                              </span>
+                            </div>
+                            <div className="text-blue-800 font-bold text-3xl">
+                              {attendanceHistory.length > 0 
+                                ? ((attendanceHistory.filter(a => a.status === "present").length / attendanceHistory.length) * 100).toFixed(1)
+                                : 0}%
+                            </div>
+                          </div>
+                        </div>
+
+                        <h4 className="text-xl font-bold text-gray-800 mb-4">
+                          Chi Tiết Các Buổi Học
+                        </h4>
+                        <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                          {attendanceHistory.sort((a, b) => new Date(b.date) - new Date(a.date)).map((record, index) => (
+                            <motion.div
+                              key={record._id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.05 }}
+                              className={`p-5 rounded-xl border-2 ${
+                                record.status === "present"
+                                  ? "bg-green-50 border-green-200"
+                                  : "bg-red-50 border-red-200"
+                              } hover:shadow-md transition-all`}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center">
+                                  {record.status === "present" ? (
+                                    <CheckCircle className="h-6 w-6 text-green-600 mr-3" />
+                                  ) : (
+                                    <X className="h-6 w-6 text-red-600 mr-3" />
+                                  )}
+                                  <div>
+                                    <div className="font-bold text-gray-800">
+                                      {new Date(record.date).toLocaleDateString("vi-VN", {
+                                        weekday: "long",
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                      })}
+                                    </div>
+                                    <div className="text-sm text-gray-600 mt-1">
+                                      Buổi {record.sessionNumber || index + 1}
+                                      {record.note && ` • ${record.note}`}
+                                    </div>
+                                  </div>
+                                </div>
+                                <span className={`px-4 py-2 rounded-lg font-bold ${
+                                  record.status === "present"
+                                    ? "bg-green-200 text-green-700"
+                                    : "bg-red-200 text-red-700"
+                                }`}>
+                                  {record.status === "present" ? "Có Mặt" : "Vắng Mặt"}
+                                </span>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1030,22 +1273,23 @@ export default function ClassDetails() {
               </motion.div>
             </AnimatePresence>
 
-            {/* 3. Đăng Ký Lớp Học - Full Width */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 overflow-hidden">
-                <div className="bg-gradient-to-br from-purple-600 via-pink-500 to-indigo-600 p-6 text-white relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-                  <div className="relative z-10 text-center">
-                    <div className="text-3xl font-light mb-2 font-serif tracking-wide opacity-90">
-                      登録
+            {/* 3. Đăng Ký Lớp Học - Full Width - Hidden when enrolled */}
+            {!isEnrolled && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 overflow-hidden">
+                  <div className="bg-gradient-to-br from-purple-600 via-pink-500 to-indigo-600 p-6 text-white relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                    <div className="relative z-10 text-center">
+                      <div className="text-3xl font-light mb-2 font-serif tracking-wide opacity-90">
+                        登録
+                      </div>
+                      <h3 className="text-2xl font-bold mb-2">Đăng Ký Lớp Học</h3>
+                      <div className="w-16 h-1 bg-white/50 rounded-full mx-auto"></div>
                     </div>
-                    <h3 className="text-2xl font-bold mb-2">Đăng Ký Lớp Học</h3>
-                    <div className="w-16 h-1 bg-white/50 rounded-full mx-auto"></div>
-                  </div>
 
                   <div className="absolute top-4 right-4 opacity-20">
                     <Sparkles className="h-8 w-8" />
@@ -1290,6 +1534,7 @@ export default function ClassDetails() {
                 </div>
               </div>
             </motion.div>
+            )}
           </div>
         </div>
       </div>

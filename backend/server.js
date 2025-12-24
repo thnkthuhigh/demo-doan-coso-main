@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import { startCleanupJob } from "./jobs/cleanExpiredEnrollments.js";
 
 // Import route files
 import authRoutes from "./routes/authRoutes.js";
@@ -67,6 +68,10 @@ mongoose
   .connect(MONGODB_URI)
   .then(() => {
     console.log("✅ Connected to MongoDB");
+    
+    // Start cleanup job for expired enrollments
+    startCleanupJob();
+    
     app.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
     });

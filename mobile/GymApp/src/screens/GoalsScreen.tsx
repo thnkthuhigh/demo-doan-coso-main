@@ -43,6 +43,9 @@ const GoalsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'completed'>('active');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [updateValue, setUpdateValue] = useState('');
 
   // New goal form
   const [newGoal, setNewGoal] = useState({
@@ -127,9 +130,21 @@ const GoalsScreen = () => {
     }
   };
 
-  const handleUpdateProgress = async (goalId: string, currentValue: number) => {
+  const handleUpdateProgress = async () => {
+    if (!selectedGoal) return;
+
+    const num = parseFloat(updateValue);
+    if (isNaN(num) || num < 0) {
+      Alert.alert('Lỗi', 'Vui lòng nhập số hợp lệ');
+      return;
+    }
+
     try {
-      await apiService.patch(`/goals/${goalId}/progress`, { currentValue });
+      await apiService.patch(`/goals/${selectedGoal._id}/progress`, { currentValue: num });
+      Alert.alert('Thành công', 'Đã cập nhật tiến độ');
+      setShowUpdateModal(false);
+      setSelectedGoal(null);
+      setUpdateValue('');
       fetchGoals();
       fetchStats();
     } catch (error: any) {
@@ -235,18 +250,9 @@ const GoalsScreen = () => {
             <TouchableOpacity
               style={styles.updateButton}
               onPress={() => {
-                Alert.prompt(
-                  'Cập nhật tiến độ',
-                  `Nhập giá trị hiện tại (${goal.unit}):`,
-                  (value) => {
-                    const num = parseFloat(value);
-                    if (!isNaN(num) && num >= 0) {
-                      handleUpdateProgress(goal._id, num);
-                    }
-                  },
-                  'plain-text',
-                  goal.currentValue.toString()
-                );
+                setSelectedGoal(goal);
+                setUpdateValue(goal.currentValue.toString());
+                setShowUpdateModal(true);
               }}
             >
               <Text style={styles.updateButtonText}>📊 Cập nhật tiến độ</Text>
@@ -399,7 +405,7 @@ const GoalsScreen = () => {
               <Text style={styles.inputLabel}>Thời hạn *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="YYYY-MM-DD (2025-12-31)"
+                placeholder="DD/MM/YYYY (31/12/2025)"
                 value={newGoal.endDate}
                 onChangeText={(text) => setNewGoal({ ...newGoal, endDate: text })}
               />
@@ -411,6 +417,52 @@ const GoalsScreen = () => {
                 <Text style={styles.submitButtonText}>Tạo mục tiêu</Text>
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Update Progress Modal */}
+      <Modal
+        visible={showUpdateModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowUpdateModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.updateModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cập nhật tiến độ</Text>
+              <TouchableOpacity onPress={() => setShowUpdateModal(false)}>
+                <Text style={styles.closeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalContent}>
+              {selectedGoal && (
+                <>
+                  <Text style={styles.updateModalLabel}>
+                    {selectedGoal.title}
+                  </Text>
+                  <Text style={styles.updateModalSubtext}>
+                    Nhập giá trị hiện tại ({selectedGoal.unit}):
+                  </Text>
+                  <TextInput
+                    style={styles.updateInput}
+                    placeholder={selectedGoal.currentValue.toString()}
+                    keyboardType="numeric"
+                    value={updateValue}
+                    onChangeText={setUpdateValue}
+                    autoFocus
+                  />
+                  <TouchableOpacity
+                    style={styles.submitButton}
+                    onPress={handleUpdateProgress}
+                  >
+                    <Text style={styles.submitButtonText}>Cập nhật</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           </View>
         </View>
       </Modal>
@@ -436,7 +488,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 48,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -725,6 +777,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  updateModalContainer: {
+    backgroundColor: '#1e1b4b',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 30,
+  },
+  updateModalLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  updateModalSubtext: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 16,
+  },
+  updateInput: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    marginBottom: 16,
   },
 });
 

@@ -18,16 +18,22 @@ import {
   Waves,
   MapPin,
   MessageCircle,
+  Menu,
+  ChevronLeft,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const AdminNav = ({ activeModule, setActiveModule }) => {
+const AdminNav = ({ activeModule, setActiveModule, isCollapsed, setIsCollapsed }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/");
+  };
+
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
   };
 
   const navItems = [
@@ -247,10 +253,28 @@ const AdminNav = ({ activeModule, setActiveModule }) => {
 
       <motion.aside
         initial={{ x: -300, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
+        animate={{ 
+          x: 0, 
+          opacity: 1,
+          width: isCollapsed ? 80 : 320
+        }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="fixed left-0 top-0 h-screen pt-20 z-30 w-80"
+        className="fixed left-0 top-0 h-screen z-30 overflow-hidden"
+        style={{ width: isCollapsed ? '80px' : '320px' }}
       >
+        {/* Toggle Button */}
+        <button
+          onClick={toggleSidebar}
+          className={`absolute top-4 z-50 p-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-sm transition-all duration-300 group ${
+            isCollapsed ? 'left-1/2 -translate-x-1/2' : 'right-4'
+          }`}
+        >
+          {isCollapsed ? (
+            <Menu className="h-5 w-5 text-gray-700 group-hover:text-gray-900" />
+          ) : (
+            <ChevronLeft className="h-5 w-5 text-gray-700 group-hover:text-gray-900" />
+          )}
+        </button>
         {/* Main container */}
         <div className="h-full relative overflow-hidden flex flex-col">
           {/* Background with decorative pattern */}
@@ -273,60 +297,66 @@ const AdminNav = ({ activeModule, setActiveModule }) => {
           <div className="absolute inset-0 glass-card border-r-2 border-white/20"></div>
 
           {/* Header Section */}
-          <div className="relative z-10 p-6 border-b border-white/20 flex-shrink-0">
+          <div className={`relative z-10 border-b border-white/20 flex-shrink-0 ${isCollapsed ? 'p-3' : 'p-6'}`}>
             <motion.div
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-              className="flex items-center space-x-4"
+              className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-4'}`}
             >
               {/* Logo */}
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-red-500 rounded-2xl blur-lg opacity-60 animate-pulse"></div>
-                <div className="relative w-14 h-14 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white/30">
-                  <Crown className="h-8 w-8 text-white drop-shadow-lg" />
+                <div className={`relative bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white/30 ${
+                  isCollapsed ? 'w-12 h-12' : 'w-14 h-14'
+                }`}>
+                  <Crown className={`text-white drop-shadow-lg ${isCollapsed ? 'h-6 w-6' : 'h-8 w-8'}`} />
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
                 </div>
               </div>
 
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className="flex-1"
-              >
-                <h2 className="admin-heading text-xl text-gray-800">
-                  Bảng Điều Khiển
-                </h2>
-                <p className="admin-light text-sm text-gray-600">
-                  Quản Trị Hệ Thống
-                </p>
-                <div className="flex items-center mt-2">
-                  <div className="w-8 h-px bg-gradient-to-r from-orange-400 to-red-500"></div>
-                  <div className="w-2 h-2 bg-red-500 rotate-45 mx-2"></div>
-                  <div className="w-8 h-px bg-gradient-to-r from-red-500 to-pink-500"></div>
-                </div>
-              </motion.div>
+              {!isCollapsed && (
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="flex-1"
+                >
+                  <h2 className="admin-heading text-xl text-gray-800">
+                    Bảng Điều Khiển
+                  </h2>
+                  <p className="admin-light text-sm text-gray-600">
+                    Quản Trị Hệ Thống
+                  </p>
+                  <div className="flex items-center mt-2">
+                    <div className="w-8 h-px bg-gradient-to-r from-orange-400 to-red-500"></div>
+                    <div className="w-2 h-2 bg-red-500 rotate-45 mx-2"></div>
+                    <div className="w-8 h-px bg-gradient-to-r from-red-500 to-pink-500"></div>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           </div>
 
           {/* Navigation Menu with scroll */}
           <div className="relative z-10 flex-1 min-h-0">
             <div className="h-full overflow-y-auto admin-scrollbar">
-              <div className="p-4 pb-4">
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                  className="mb-6"
-                >
-                  <div className="flex items-center space-x-2 mb-3">
-                    <div className="w-4 h-px bg-gradient-to-r from-gray-400 to-transparent"></div>
-                    <span className="admin-light text-xs text-gray-600 uppercase tracking-wider">
-                      Hệ Thống Quản Lý
-                    </span>
-                  </div>
-                </motion.div>
+              <div className={`pb-4 ${isCollapsed ? 'p-2' : 'p-4'}`}>
+                {!isCollapsed && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                    className="mb-6"
+                  >
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="w-4 h-px bg-gradient-to-r from-gray-400 to-transparent"></div>
+                      <span className="admin-light text-xs text-gray-600 uppercase tracking-wider">
+                        Hệ Thống Quản Lý
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
 
                 <div className="space-y-2">
                   {navItems.map((item, index) => (
@@ -340,13 +370,14 @@ const AdminNav = ({ activeModule, setActiveModule }) => {
                       <button
                         onClick={() => setActiveModule(item.id)}
                         className={`
-                          group relative w-full flex items-center p-4 rounded-2xl transition-all duration-500 glass-card-hover
+                          group relative w-full flex items-center ${isCollapsed ? 'justify-center p-3' : 'p-4'} rounded-2xl transition-all duration-500 glass-card-hover
                           ${
                             activeModule === item.id
                               ? "glass-card shadow-2xl border-2 border-white/40 transform scale-105"
                               : "hover:glass-card hover:shadow-lg bg-black/10 hover:bg-white/20"
                           }
                         `}
+                        title={isCollapsed ? item.label : ''}
                       >
                         {/* Active indicator */}
                         {activeModule === item.id && (
@@ -394,9 +425,10 @@ const AdminNav = ({ activeModule, setActiveModule }) => {
                           )}
                         </div>
 
-                        <div className="ml-4 flex-1 text-left">
-                          <div
-                            className={`
+                        {!isCollapsed && (
+                          <div className="ml-4 flex-1 text-left">
+                            <div
+                              className={`
                               admin-font text-sm transition-colors duration-300
                               ${
                                 activeModule === item.id
@@ -408,8 +440,9 @@ const AdminNav = ({ activeModule, setActiveModule }) => {
                             {item.label}
                           </div>
                         </div>
+                        )}
 
-                        {activeModule === item.id && (
+                        {!isCollapsed && activeModule === item.id && (
                           <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
@@ -428,25 +461,30 @@ const AdminNav = ({ activeModule, setActiveModule }) => {
           </div>
 
           {/* Bottom section with logout */}
-          <div className="relative z-10 p-4 bg-gradient-to-t from-white/95 to-white/80 backdrop-blur-sm border-t border-white/20 flex-shrink-0">
+          <div className={`relative z-10 bg-gradient-to-t from-white/95 to-white/80 backdrop-blur-sm border-t border-white/20 flex-shrink-0 ${isCollapsed ? 'p-2' : 'p-4'}`}>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleLogout}
-              className="group w-full flex items-center p-4 bg-white/80 hover:bg-red-50 rounded-2xl transition-all duration-300 glass-card-hover border border-white/40 hover:border-red-200"
+              className={`group w-full flex items-center ${isCollapsed ? 'justify-center p-2' : 'p-4'} bg-white/80 hover:bg-red-50 rounded-2xl transition-all duration-300 glass-card-hover border border-white/40 hover:border-red-200`}
+              title={isCollapsed ? "Đăng Xuất" : ''}
             >
-              <div className="w-10 h-10 bg-red-100 group-hover:bg-red-200 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110">
-                <LogOut className="h-5 w-5 text-red-600" />
+              <div className={`bg-red-100 group-hover:bg-red-200 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 ${
+                isCollapsed ? 'w-8 h-8' : 'w-10 h-10'
+              }`}>
+                <LogOut className={`text-red-600 ${isCollapsed ? 'h-4 w-4' : 'h-5 w-5'}`} />
               </div>
 
-              <div className="ml-4 text-left flex-1">
-                <div className="admin-font text-sm font-medium text-gray-800">
-                  Đăng Xuất
+              {!isCollapsed && (
+                <div className="ml-4 text-left flex-1">
+                  <div className="admin-font text-sm font-medium text-gray-800">
+                    Đăng Xuất
+                  </div>
+                  <div className="admin-light text-xs text-gray-500">
+                    Thoát khỏi hệ thống
+                  </div>
                 </div>
-                <div className="admin-light text-xs text-gray-500">
-                  Thoát khỏi hệ thống
-                </div>
-              </div>
+              )}
             </motion.button>
 
             {/* Version info */}

@@ -101,6 +101,11 @@ export default function ViewClasses() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      
+      console.log("Fetched enrollments:", response.data);
+      console.log("Total enrollments:", response.data?.length);
+      console.log("Unpaid enrollments:", response.data?.filter(e => !e.paymentStatus).length);
+      
       setUserEnrollments(response.data || []);
     } catch (error) {
       console.error("Error fetching user enrollments:", error);
@@ -134,6 +139,10 @@ export default function ViewClasses() {
         return;
       }
 
+      console.log("Enrolling in class:", classId);
+      console.log("User:", user);
+      console.log("Token:", token ? "exists" : "missing");
+
       await axios.post(
         "http://localhost:5000/api/classes/enroll",
         { classId },
@@ -145,16 +154,41 @@ export default function ViewClasses() {
         }
       );
 
-      showMessage("✅ Đăng ký lớp học thành công!");
-      fetchClasses();
+      showMessage("✅ Đăng ký lớp học thành công! Chuyển đến giỏ hàng...");
+      
+      // Refresh enrollments to update UI
       if (user._id) {
-        fetchUserEnrollments(user._id);
+        await fetchUserEnrollments(user._id);
       }
+      
+      // Navigate to cart after a brief delay
+      setTimeout(() => {
+        navigate("/payment");
+      }, 1500);
     } catch (error) {
       console.error("Error enrolling:", error);
-      const errorMessage =
-        error.response?.data?.message || "Có lỗi xảy ra khi đăng ký";
-      showMessage(`❌ ${errorMessage}`, "error");
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+      console.error("Full error:", JSON.stringify(error.response?.data, null, 2));
+      
+      const errorMessage = error.response?.data?.message || "Có lỗi xảy ra khi đăng ký";
+      
+      // Nếu lỗi là "đã đăng ký", refresh enrollments và chuyển đến giỏ hàng
+      if (errorMessage.includes("đã đăng ký")) {
+        showMessage("ℹ️ Bạn đã đăng ký lớp này rồi. Chuyển đến giỏ hàng...", "info");
+        
+        // Refresh enrollments
+        if (user._id) {
+          await fetchUserEnrollments(user._id);
+        }
+        
+        // Navigate to cart
+        setTimeout(() => {
+          navigate("/payment");
+        }, 1500);
+      } else {
+        showMessage(`❌ ${errorMessage}`, "error");
+      }
     } finally {
       setEnrolling(null);
     }
@@ -237,10 +271,24 @@ export default function ViewClasses() {
     }
   };
 
-  const isUserEnrolled = (classId) => {
-    return userEnrollments.some(
+  const getUserEnrollment = (classId) => {
+    return userEnrollments.find(
       (enrollment) => enrollment.class?._id === classId
     );
+  };
+
+  const isUserEnrolled = (classId) => {
+    const enrollment = getUserEnrollment(classId);
+    const enrolled = !!enrollment;
+    console.log(`Checking if user enrolled in class ${classId}:`, enrolled);
+    if (enrollment) {
+      console.log("Enrollment details:", {
+        id: enrollment._id,
+        classId: enrollment.class?._id,
+        paid: enrollment.paymentStatus
+      });
+    }
+    return enrolled;
   };
 
   const filteredClasses = classes.filter((cls) => {
@@ -658,7 +706,9 @@ export default function ViewClasses() {
             {filteredClasses.map((classItem, index) => {
               const statusInfo = getStatusInfo(classItem.status);
               const StatusIcon = statusInfo.icon;
-              const isEnrolled = isUserEnrolled(classItem._id);
+              const enrollment = getUserEnrollment(classItem._id);
+              const isEnrolled = !!enrollment;
+              const isPaid = enrollment?.paymentStatus;
               const canEnroll =
                 (classItem.status === "upcoming" ||
                   classItem.status === "ongoing") &&
@@ -826,14 +876,40 @@ export default function ViewClasses() {
                         <div className="flex-1 ml-4">
                           {user ? (
                             isEnrolled ? (
-                              <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                disabled
-                                className="w-full flex items-center justify-center bg-green-50 border-2 border-green-200 text-green-700 px-4 py-3 rounded-xl font-semibold transition-all duration-300"
-                              >
-                                <CheckCircle className="h-5 w-5 mr-2" />
-                                Đã Đăng Ký
-                              </motion.button>
+                              isPaid ? (
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  disabled
+                                  className="w-full flex items-center justify-center bg-green-50 border-2 border-green-200 text-green-700 px-4 py-3 rounded-xl font-semibold transition-all duration-300"
+                                >
+                                  <CheckCircle className="h-5 w-5 mr-2" />
+                                  Đã Đăng Ký
+                                </motion.button>
+                              ) : (
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  onClick={() => {
+                                    // Find the enrollment for this class
+                                    const enrollment = userEnrollments.find(
+                                      (e) => e.class?._id === classItem._id && !e.paymentStatus
+                                    );
+                                    if (enrollment) {
+                                      navigate("/payment", { 
+                                        state: { 
+                                          autoSelectClass: enrollment._id,
+                                          fromClass: true 
+                                        } 
+                                      });
+                                    } else {
+                                      navigate("/payment");
+                                    }
+                                  }}
+                                  className="w-full flex items-center justify-center bg-yellow-50 border-2 border-yellow-400 text-yellow-700 px-4 py-3 rounded-xl font-semibold transition-all duration-300 hover:bg-yellow-100"
+                                >
+                                  <Clock className="h-5 w-5 mr-2" />
+                                  Chờ Thanh Toán
+                                </motion.button>
+                              )
                             ) : canEnroll ? (
                               <motion.button
                                 whileHover={{ scale: 1.02 }}

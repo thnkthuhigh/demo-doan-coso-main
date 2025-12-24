@@ -20,12 +20,21 @@ const EditProfileScreen = ({ navigation }: any) => {
   const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [avatarUri, setAvatarUri] = useState<string | null>(
-    (user as any)?.avatar || (user as any)?.profilePicture || null
-  );
+  
+  // Get avatar URI and ensure it's a string
+  const getAvatarUri = () => {
+    const avatar = (user as any)?.avatar || (user as any)?.profilePicture;
+    if (!avatar) return null;
+    if (typeof avatar === 'string') return avatar;
+    if (typeof avatar === 'object' && avatar.uri) return avatar.uri;
+    if (typeof avatar === 'object' && avatar.url) return avatar.url;
+    return null;
+  };
+  
+  const [avatarUri, setAvatarUri] = useState<string | null>(getAvatarUri());
   
   const [formData, setFormData] = useState({
-    name: user?.name || '',
+    fullName: (user as any)?.fullName || user?.name || '',
     email: user?.email || '',
     phone: (user as any)?.phone || '',
     dob: (user as any)?.dob || '',
@@ -84,16 +93,22 @@ const EditProfileScreen = ({ navigation }: any) => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      const userId = (user as any)?._id || (user as any)?.id;
       
-      await apiService.put(`/users/${userId}`, formData);
+      // Sử dụng endpoint /profile để user tự cập nhật profile (không cần quyền admin)
+      await apiService.put('/users/profile', formData);
+      
+      // Cập nhật context với thông tin mới
+      if (updateUser) {
+        updateUser({ ...user, ...formData } as any);
+      }
       
       Alert.alert('Thành công', 'Đã cập nhật thông tin cá nhân', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      Alert.alert('Lỗi', 'Không thể cập nhật thông tin');
+      const errorMessage = error.response?.data?.message || 'Không thể cập nhật thông tin';
+      Alert.alert('Lỗi', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -118,7 +133,7 @@ const EditProfileScreen = ({ navigation }: any) => {
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarPlaceholderText}>
-                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  {((user as any)?.fullName || user?.name)?.charAt(0).toUpperCase() || 'U'}
                 </Text>
               </View>
             )}
@@ -153,10 +168,12 @@ const EditProfileScreen = ({ navigation }: any) => {
             <Text style={styles.label}>Họ và tên</Text>
             <TextInput
               style={styles.input}
-              value={formData.name}
-              onChangeText={(text) => setFormData({ ...formData, name: text })}
+              value={formData.fullName}
+              onChangeText={(text) => setFormData({ ...formData, fullName: text })}
               placeholder="Nhập họ tên"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              keyboardType="default"
+              underlineColorAndroid="transparent"
             />
           </View>
 
@@ -170,6 +187,8 @@ const EditProfileScreen = ({ navigation }: any) => {
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
+              underlineColorAndroid="transparent"
             />
           </View>
 
@@ -182,6 +201,7 @@ const EditProfileScreen = ({ navigation }: any) => {
               placeholder="Nhập số điện thoại"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
               keyboardType="phone-pad"
+              underlineColorAndroid="transparent"
             />
           </View>
 
@@ -193,6 +213,7 @@ const EditProfileScreen = ({ navigation }: any) => {
               onChangeText={(text) => setFormData({ ...formData, dob: text })}
               placeholder="DD/MM/YYYY"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              underlineColorAndroid="transparent"
             />
           </View>
 

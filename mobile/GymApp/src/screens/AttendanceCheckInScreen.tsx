@@ -61,17 +61,18 @@ const AttendanceCheckInScreen = ({ route, navigation }: any) => {
             try {
               setCheckingIn(sessionNumber);
               
-              await apiService.post('/attendances/mark', {
+              await apiService.post('/attendance/mark', {
                 userId,
                 classId,
                 sessionNumber,
-                status: 'present',
-                checkInTime: new Date().toISOString(),
+                isPresent: true,
+                notes: '',
               });
 
               Alert.alert('Thành công', 'Điểm danh thành công!');
               fetchSessions(); // Refresh để cập nhật trạng thái
             } catch (error: any) {
+              console.error('Check-in error:', error);
               Alert.alert(
                 'Lỗi',
                 error.message || 'Không thể điểm danh. Vui lòng thử lại.'

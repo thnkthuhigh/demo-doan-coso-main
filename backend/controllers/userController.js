@@ -372,7 +372,14 @@ export const changePassword = async (req, res) => {
 // Lấy danh sách tất cả users (cho admin)
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    const { role } = req.query;
+    
+    const filter = {};
+    if (role) {
+      filter.role = role;
+    }
+    
+    const users = await User.find(filter).select("-password").sort({ createdAt: -1 });
     res.json(users);
   } catch (error) {
     console.error("Error getting all users:", error);

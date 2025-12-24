@@ -19,7 +19,11 @@ interface EnrolledClass {
     name: string;
     instructor: string;
     schedule: string;
+    scheduleTime?: string;
     capacity: number;
+    duration?: string;
+    location?: string;
+    startDate?: string;
   };
   enrolledAt: string;
   status: string;
@@ -34,10 +38,107 @@ const MyClassesScreen = ({ navigation }: any) => {
   const fetchMyClasses = useCallback(async () => {
     try {
       const userId = (user as any)?._id || (user as any)?.id;
+      const userRole = (user as any)?.role;
+      
       if (!userId) return;
 
-      const response = await apiService.get(`/classes/enrollments/user/${userId}`);
-      setClasses(response as EnrolledClass[]);
+      console.log('User role:', userRole);
+      console.log('User ID:', userId);
+
+      // Helper function to format schedule
+      const formatSchedule = (schedule: any): { days: string; time: string } => {
+        const defaultResult = { days: 'Chưa có lịch', time: '' };
+        
+        if (!schedule) return defaultResult;
+        if (typeof schedule === 'string') {
+          // Try to parse string format like "T2 08:00-09:00, T4 08:00-09:00"
+          const parts = schedule.split(',').map(s => s.trim());
+          const days = parts.map(p => p.split(' ')[0]).join(', ');
+          const firstTime = parts[0]?.split(' ')[1] || '';
+          return { days, time: firstTime };
+        }
+        
+        if (Array.isArray(schedule) && schedule.length > 0) {
+          const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+          const days = schedule.map((s: any) => {
+            return typeof s.dayOfWeek === 'number' ? dayNames[s.dayOfWeek] : s.dayOfWeek;
+          }).join(', ');
+          
+          const firstSchedule = schedule[0];
+          const time = `${firstSchedule.startTime || ''}-${firstSchedule.endTime || ''}`;
+          
+          return { days, time };
+        }
+        
+        if (typeof schedule === 'object' && schedule.dayOfWeek) {
+          const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+          const day = typeof schedule.dayOfWeek === 'number' ? dayNames[schedule.dayOfWeek] : schedule.dayOfWeek;
+          const time = `${schedule.startTime || ''}-${schedule.endTime || ''}`;
+          return { days: day, time };
+        }
+        
+        return defaultResult;
+      };
+
+      // Nếu là trainer/instructor, lấy lớp đang dạy
+      if (userRole === 'trainer' || userRole === 'instructor') {
+        const response: any = await apiService.get(`/classes/instructor/${userId}`);
+        console.log('Instructor classes:', response);
+        
+        const instructorClasses = Array.isArray(response)
+          ? response.map((item: any) => {
+              const scheduleFormatted = formatSchedule(item.schedule);
+              return {
+                _id: item._id,
+                classId: {
+                  _id: item._id,
+                  name: item.className || item.name,
+                  instructor: item.instructorName || 'Bạn',
+                  schedule: scheduleFormatted.days,
+                  scheduleTime: scheduleFormatted.time,
+                  capacity: item.capacity || 20,
+                  duration: item.duration || 'Chưa xác định',
+                  location: item.location || 'Phòng tập chính',
+                  startDate: item.startDate,
+                },
+                enrolledAt: item.createdAt || new Date().toISOString(),
+                status: 'active',
+              };
+            })
+          : [];
+        
+        setClasses(instructorClasses as EnrolledClass[]);
+      } else {
+        // Nếu là học viên, lấy lớp đã thanh toán
+        const response: any = await apiService.get(`/classes/user/${userId}`);
+        
+        const paidClasses = Array.isArray(response) 
+          ? response
+              .filter((item: any) => item.paymentStatus === true)
+              .map((item: any) => {
+                const scheduleFormatted = formatSchedule(item.schedule);
+                return {
+                  _id: item._id,
+                  classId: {
+                    _id: item.classId || item._id,
+                    name: item.className || item.name,
+                    instructor: item.instructorName || 'Chưa có HLV',
+                    schedule: scheduleFormatted.days,
+                    scheduleTime: scheduleFormatted.time,
+                    capacity: item.capacity || 20,
+                    duration: item.duration || 'Chưa xác định',
+                    location: item.location || 'Phòng tập chính',
+                    startDate: item.startDate,
+                  },
+                  enrolledAt: item.enrolledAt || new Date().toISOString(),
+                  status: 'active',
+                };
+              })
+          : [];
+        
+        console.log('Paid classes:', paidClasses);
+        setClasses(paidClasses as EnrolledClass[]);
+      }
     } catch (error) {
       console.error('Error fetching my classes:', error);
     } finally {
@@ -55,46 +156,37 @@ const MyClassesScreen = ({ navigation }: any) => {
     fetchMyClasses();
   };
 
-  const handleUnenroll = (classId: string, className: string) => {
-    Alert.alert(
-      'Hủy đăng ký',
-      `Bạn có chắc muốn hủy đăng ký lớp "${className}"?`,
-      [
-        { text: 'Không', style: 'cancel' },
-        {
-          text: 'Có',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const userId = (user as any)?._id || (user as any)?.id;
-              await apiService.delete(`/classes/${classId}/enroll/${userId}`);
-              Alert.alert('Thành công', 'Đã hủy đăng ký lớp học');
-              fetchMyClasses();
-            } catch (error) {
-              console.error('Error unenrolling:', error);
-              Alert.alert('Lỗi', 'Không thể hủy đăng ký lớp học');
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const handleViewDetails = (classId: string) => {
     navigation.navigate('ClassDetail', { classId });
   };
 
-  const renderClassCard = (enrollment: EnrolledClass) => {
+  const renderClassCard = (enrollment: EnrolledClass, index: number) => {
     const classData = enrollment.classId;
     if (!classData) return null;
 
+    // Tạo mảng màu cho các lớp học với nhiều màu khác biệt
+    const cardColors = [
+      { bg: '#4f46e5', light: '#e0e7ff' }, // Indigo
+      { bg: '#f59e0b', light: '#fef3c7' }, // Orange  
+      { bg: '#8b5cf6', light: '#ede9fe' }, // Purple
+      { bg: '#10b981', light: '#d1fae5' }, // Green
+      { bg: '#ef4444', light: '#fee2e2' }, // Red
+      { bg: '#06b6d4', light: '#cffafe' }, // Cyan
+      { bg: '#ec4899', light: '#fce7f3' }, // Pink
+      { bg: '#14b8a6', light: '#ccfbf1' }, // Teal
+    ];
+    
+    // Sử dụng index để mỗi lớp trong danh sách có màu khác nhau
+    const colorIndex = index % cardColors.length;
+    const colorScheme = cardColors[colorIndex];
+
     return (
-      <View key={enrollment._id} style={styles.classCard}>
+      <View key={enrollment._id} style={[styles.classCard, { backgroundColor: colorScheme.bg }]}>
         <View style={styles.cardHeader}>
           <View style={styles.headerLeft}>
             <Text style={styles.className}>{classData.name}</Text>
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>
+            <View style={[styles.statusBadge, { backgroundColor: colorScheme.light }]}>
+              <Text style={[styles.statusText, { color: colorScheme.bg }]}>
                 {enrollment.status === 'active' ? 'Đang học' : 'Hoàn thành'}
               </Text>
             </View>
@@ -104,50 +196,60 @@ const MyClassesScreen = ({ navigation }: any) => {
         <View style={styles.cardBody}>
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>👨‍🏫</Text>
-            <Text style={styles.infoText}>{classData.instructor}</Text>
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoLabel}>Giảng viên</Text>
+              <Text style={styles.infoText}>{classData.instructor}</Text>
+            </View>
           </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>📅</Text>
-            <Text style={styles.infoText}>{classData.schedule}</Text>
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoLabel}>Lịch học</Text>
+              <Text style={styles.infoText}>{classData.schedule}</Text>
+              {classData.scheduleTime && (
+                <Text style={styles.infoTime}>{classData.scheduleTime}</Text>
+              )}
+            </View>
           </View>
+
+          {classData.location && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>📍</Text>
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Địa điểm</Text>
+                <Text style={styles.infoText}>{classData.location}</Text>
+              </View>
+            </View>
+          )}
+
+          {classData.startDate && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>🗓️</Text>
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Ngày bắt đầu</Text>
+                <Text style={styles.infoText}>
+                  {new Date(classData.startDate).toLocaleDateString('vi-VN')}
+                </Text>
+              </View>
+            </View>
+          )}
 
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>👥</Text>
-            <Text style={styles.infoText}>Sức chứa: {classData.capacity} người</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📝</Text>
-            <Text style={styles.infoText}>
-              Đăng ký: {new Date(enrollment.enrolledAt).toLocaleDateString('vi-VN')}
-            </Text>
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoLabel}>Sức chứa</Text>
+              <Text style={styles.infoText}>{classData.capacity} người</Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.cardActions}>
           <TouchableOpacity
-            style={styles.checkInButton}
-            onPress={() => navigation.navigate('AttendanceCheckIn', { 
-              classId: classData._id,
-              className: classData.name 
-            })}
-          >
-            <Text style={styles.checkInButtonText}>✓ Điểm danh</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.viewButton}
+            style={styles.viewButtonFull}
             onPress={() => handleViewDetails(classData._id)}
           >
             <Text style={styles.viewButtonText}>Xem chi tiết</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.unenrollButton}
-            onPress={() => handleUnenroll(classData._id, classData.name)}
-          >
-            <Text style={styles.unenrollButtonText}>Hủy đăng ký</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -185,7 +287,7 @@ const MyClassesScreen = ({ navigation }: any) => {
             <Text style={styles.emptyText}>Chưa đăng ký lớp nào</Text>
             <TouchableOpacity
               style={styles.browseButton}
-              onPress={() => navigation.navigate('Classes')}
+              onPress={() => navigation.navigate('Main', { screen: 'Classes' })}
             >
               <Text style={styles.browseButtonText}>Khám phá lớp học</Text>
             </TouchableOpacity>
@@ -216,20 +318,20 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 48,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#000',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
   },
   scrollView: {
@@ -239,15 +341,14 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   classCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -261,11 +362,10 @@ const styles = StyleSheet.create({
   className: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   statusBadge: {
-    backgroundColor: '#4CAF5020',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -281,7 +381,7 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   infoIcon: {
@@ -289,10 +389,26 @@ const styles = StyleSheet.create({
     marginRight: 12,
     width: 28,
   },
+  infoTextContainer: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    opacity: 0.7,
+    marginBottom: 2,
+    fontWeight: '500',
+  },
   infoText: {
     fontSize: 14,
-    color: '#666',
-    flex: 1,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  infoTime: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    marginTop: 2,
   },
   cardActions: {
     flexDirection: 'row',
@@ -317,22 +433,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
   },
+  viewButtonFull: {
+    width: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
   viewButtonText: {
     color: '#FFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  unenrollButton: {
-    flex: 1,
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FF3B30',
-  },
-  unenrollButtonText: {
-    color: '#FF3B30',
     fontSize: 14,
     fontWeight: '600',
   },

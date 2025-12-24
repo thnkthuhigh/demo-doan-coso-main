@@ -8,7 +8,6 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api';
 
@@ -40,9 +39,17 @@ const StatisticsScreen = () => {
     try {
       setLoading(true);
       const userId = (user as any)?._id || (user as any)?.id;
+      const userRole = (user as any)?.role;
+      
       if (!userId) return;
 
-      const response = await apiService.get(`/stats/user/${userId}`);
+      // Call different API based on role
+      const endpoint = userRole === 'trainer' 
+        ? `/stats/instructor/${userId}`
+        : `/stats/user/${userId}`;
+
+      console.log('Fetching stats for role:', userRole, 'from:', endpoint);
+      const response = await apiService.get(endpoint);
       setStats(response as Stats);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -93,19 +100,8 @@ const StatisticsScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
-      <LinearGradient
-        colors={['#581c87', '#1e40af', '#047857']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <Text style={styles.headerTitle}>📊 Thống Kê Của Tôi</Text>
-        <Text style={styles.headerSubtitle}>
-          {user?.name || 'Thành viên'}
-        </Text>
-      </LinearGradient>
-
+   
+    
       {/* Period Selector */}
       <View style={styles.periodSelector}>
         <TouchableOpacity
@@ -136,10 +132,22 @@ const StatisticsScreen = () => {
 
       {/* Main Stats Grid */}
       <View style={styles.statsGrid}>
-        {renderStatCard('💪', 'Lớp đã đăng ký', stats?.totalClasses || 0)}
-        {renderStatCard('✅', 'Buổi đã tập', stats?.totalAttendance || 0)}
+        {renderStatCard(
+          '💪', 
+          (user as any)?.role === 'trainer' ? 'Lớp đã dạy' : 'Lớp đã đăng ký', 
+          stats?.totalClasses || 0
+        )}
+        {renderStatCard(
+          '✅', 
+          (user as any)?.role === 'trainer' ? 'Buổi đã dạy' : 'Buổi đã tập', 
+          stats?.totalAttendance || 0
+        )}
         {renderStatCard('🔥', 'Streak hiện tại', `${stats?.currentStreak || 0} ngày`)}
-        {renderStatCard('💰', 'Tổng chi tiêu', `${(stats?.totalSpent || 0).toLocaleString('vi-VN')}đ`)}
+        {renderStatCard(
+          '💰', 
+          (user as any)?.role === 'trainer' ? 'Tổng thu nhập' : 'Tổng chi tiêu', 
+          `${(stats?.totalSpent || 0).toLocaleString('vi-VN')}đ`
+        )}
       </View>
 
       {/* Attendance Rate */}
@@ -295,20 +303,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255,255,255,0.7)',
   },
-  header: {
-    padding: 24,
-    paddingTop: 32,
+  header: {    padding: 16,
+    paddingTop: 48,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    opacity: 0.9,
   },
   periodSelector: {
     flexDirection: 'row',

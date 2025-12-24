@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import apiService from '../services/api';
 
 const { width } = Dimensions.get('window');
@@ -24,28 +27,68 @@ interface CalendarEvent {
   title: string;
   time?: string;
   status?: string;
+  location?: string;
+  className?: string;
+  sessionNumber?: number;
 }
 
-const CalendarScreen = () => {
+const CalendarScreen = ({ navigation }: any) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchCalendarEvents = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      // Debug: Check token
+      const token = await AsyncStorage.getItem('token');
+      console.log('Token exists:', !!token);
+      console.log('User:', user);
+      
+      if (!token) {
+        console.warn('No token found - user may not be logged in');
+        setError(null); // Don't show error, just show empty calendar
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
+      
       const userId = (user as any)?._id || (user as any)?.id;
-      if (!userId) return;
+      
+      if (!userId) {
+        console.warn('No user ID found');
+        setError(null); // Don't show error for guest users
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
 
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
 
+      console.log('Fetching calendar events for:', { userId, year, month });
       const response = await apiService.get(`/calendar/user/${userId}?year=${year}&month=${month}`);
+      console.log('Calendar events received:', response);
       setEvents(response as CalendarEvent[]);
-    } catch (error) {
-      console.error('Error fetching calendar events:', error);
+    } catch (err: any) {
+      console.error('Error fetching calendar events:', err);
+      console.error('Error details:', err?.message || err);
+      
+      let errorMessage = 'Không thể tải lịch tập';
+      if (err?.message?.includes('Token') || err?.message?.includes('token')) {
+        errorMessage = 'Phiên đăng nhập hết hạn';
+      } else if (err?.message?.includes('kết nối') || err?.message?.includes('Network')) {
+        errorMessage = 'Không thể kết nối đến server';
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       setEvents([]);
     } finally {
       setLoading(false);
@@ -55,6 +98,14 @@ const CalendarScreen = () => {
   useEffect(() => {
     fetchCalendarEvents();
   }, [fetchCalendarEvents]);
+
+  // Refresh calendar khi quay lại màn hình (sau khi điểm danh)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Calendar screen focused - refreshing events...');
+      fetchCalendarEvents();
+    }, [fetchCalendarEvents])
+  );
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -163,28 +214,14 @@ const CalendarScreen = () => {
 
   const renderEventsList = () => {
     if (!selectedDate) {
-      // Show upcoming events
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const upcomingEvents = events
-        .filter(event => new Date(event.date) >= today)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(0, 5);
-
-      if (upcomingEvents.length === 0) {
-        return (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📅</Text>
-            <Text style={styles.emptyText}>Không có sự kiện sắp tới</Text>
-          </View>
-        );
-      }
-
+      // Không hiển thị gì khi chưa chọn ngày
       return (
-        <View>
-          <Text style={styles.eventsTitle}>📌 Sự kiện sắp tới</Text>
-          {upcomingEvents.map(renderEventItem)}
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>📅</Text>
+          <Text style={styles.emptyText}>Chọn một ngày để xem lịch dạy</Text>
+          <Text style={styles.emptySubText}>
+            Nhấn vào ngày trên lịch để xem chi tiết
+          </Text>
         </View>
       );
     }
@@ -199,15 +236,26 @@ const CalendarScreen = () => {
           <Text style={styles.emptyText}>
             Không có sự kiện vào ngày {selectedDate.getDate()}/{selectedDate.getMonth() + 1}
           </Text>
+          <TouchableOpacity 
+            style={styles.clearSelectionButton}
+            onPress={() => setSelectedDate(null)}
+          >
+            <Text style={styles.clearSelectionText}>Xem sự kiện sắp tới</Text>
+          </TouchableOpacity>
         </View>
       );
     }
 
     return (
       <View>
-        <Text style={styles.eventsTitle}>
-          📅 Ngày {selectedDate.getDate()}/{selectedDate.getMonth() + 1}/{selectedDate.getFullYear()}
-        </Text>
+        <View style={styles.selectedDateHeader}>
+          <Text style={styles.selectedDateTitle}>
+            📅 Ngày {selectedDate.getDate()}/{selectedDate.getMonth() + 1}/{selectedDate.getFullYear()}
+          </Text>
+          <TouchableOpacity onPress={() => setSelectedDate(null)}>
+            <Text style={styles.clearSelectionButton2}>✕</Text>
+          </TouchableOpacity>
+        </View>
         {dayEvents.map(renderEventItem)}
       </View>
     );
@@ -235,16 +283,68 @@ const CalendarScreen = () => {
     const eventDate = new Date(event.date);
     const isTodayEvent = new Date().toDateString() === eventDate.toDateString();
 
+    const handleEventPress = async () => {
+      // Nếu là lớp dạy, hiển thị chi tiết
+      if (event.title.startsWith('Dạy:')) {
+        const className = event.title.replace('Dạy: ', '');
+        
+        // Extract class ID from event._id (format: classId-date-class)
+        const classId = event._id.split('-')[0];
+        
+        // Get date from selectedDate instead of event.date to avoid timezone issues
+        const dateOnly = selectedDate 
+          ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+          : event.date.split('T')[0];
+        
+        // Nếu đã điểm danh, hiển thị chi tiết điểm danh
+        if (event.type === 'attendance') {
+          // Navigate to AttendanceDetailScreen
+          navigation.navigate('AttendanceDetail', {
+            classId: classId,
+            className: className,
+            date: dateOnly,
+            sessionNumber: event.sessionNumber || 1,
+          });
+        } else {
+          // Chưa điểm danh, hiển thị thông tin lớp học
+          Alert.alert(
+            `📚 ${className}`,
+            `📍 Địa điểm: ${event.location || 'Phòng tập chính'}\n` +
+            `⏰ Thời gian: ${event.time || 'Chưa xác định'}\n` +
+            `📅 Ngày: ${eventDate.getDate()}/${eventDate.getMonth() + 1}/${eventDate.getFullYear()}`,
+            [
+              {
+                text: 'Xem điểm danh',
+                onPress: () => {
+                  // Vẫn đến AttendanceDetailScreen để xem và sửa
+                  navigation.navigate('AttendanceDetail', {
+                    classId: classId,
+                    className: className,
+                    date: dateOnly,
+                    sessionNumber: event.sessionNumber || 1,
+                  });
+                }
+              },
+              { text: 'Đóng', style: 'cancel' }
+            ]
+          );
+        }
+      } else {
+        // Hiển thị thông tin event khác
+        Alert.alert(
+          event.title,
+          `📅 ${eventDate.getDate()}/${eventDate.getMonth() + 1}/${eventDate.getFullYear()}\n` +
+          `⏰ ${event.time || 'Cả ngày'}`,
+          [{ text: 'OK' }]
+        );
+      }
+    };
+
     return (
       <TouchableOpacity
         key={event._id}
         style={styles.eventItem}
-        onPress={() => {
-          // Navigate to detail if needed
-          if (event.type === 'class') {
-            // navigation.navigate('ClassDetail', { classId: event._id });
-          }
-        }}
+        onPress={handleEventPress}
       >
         <View style={[styles.eventIconContainer, { backgroundColor: getEventColor(event.type) }]}>
           <Text style={styles.eventIcon}>{getEventIcon(event.type)}</Text>
@@ -272,11 +372,27 @@ const CalendarScreen = () => {
     );
   };
 
-  if (loading && events.length === 0) {
+  if (loading && events.length === 0 && !error) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#ec4899" />
         <Text style={styles.loadingText}>Đang tải lịch...</Text>
+      </View>
+    );
+  }
+
+  if (error && !loading) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={styles.errorTitle}>Không thể tải lịch</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={fetchCalendarEvents}
+        >
+          <Text style={styles.retryButtonText}>Thử lại</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -372,14 +488,14 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
   },
   header: {
-    padding: 20,
-    paddingTop: 40,
+    padding: 16,
+    paddingTop: 48,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#fff',
   },
@@ -528,6 +644,41 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 12,
   },
+  upcomingEventsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#a78bfa',
+    marginBottom: 12,
+  },
+  selectedDateHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  selectedDateTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ec4899',
+  },
+  clearSelectionButton: {
+    marginTop: 12,
+    backgroundColor: '#8b5cf6',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  clearSelectionText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  clearSelectionButton2: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    paddingHorizontal: 12,
+  },
   eventItem: {
     flexDirection: 'row',
     backgroundColor: '#1e1b4b',
@@ -601,8 +752,59 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
   },
+  emptySubText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+    textAlign: 'center',
+    marginTop: 8,
+  },
   bottomSpacing: {
     height: 24,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 20,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#ec4899',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  fetchingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
   },
 });
 

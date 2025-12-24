@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import apiService from '../services/api';
@@ -38,7 +39,7 @@ const HomeScreenWeb = () => {
 
       let classes: any[] = [];
       try {
-        const result = await apiService.get(`/classes/enrollments/user/${userId}`);
+        const result = await apiService.get(`/classes/user/${userId}`);
         classes = result as any[];
       } catch {
         console.log('No enrolled classes');
@@ -95,27 +96,43 @@ const HomeScreenWeb = () => {
         <View style={[styles.floatingDecor, styles.decor3]} />
         <View style={[styles.floatingDecor, styles.decor4]} />
 
-        {/* Notification Bell */}
-        <TouchableOpacity
-          style={styles.bellButton}
-          onPress={() => navigation.navigate('Notifications')}
-        >
-          <LinearGradient
-            colors={['#ec4899', '#ef4444']}
-            style={styles.bellGradient}
+        {/* Top Right Icons */}
+        <View style={styles.topRightIcons}>
+          {/* Cart Icon */}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('Cart')}
           >
-            <Text style={styles.bellIcon}>🔔</Text>
-            <View style={styles.bellBadge}>
-              <Text style={styles.bellBadgeText}>3</Text>
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={['#3b82f6', '#6366f1']}
+              style={styles.iconGradient}
+            >
+              <Icon name="cart" size={22} color="#FFFFFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Notification Bell */}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <LinearGradient
+              colors={['#ec4899', '#ef4444']}
+              style={styles.iconGradient}
+            >
+              <Icon name="notifications" size={22} color="#FFFFFF" />
+              <View style={styles.iconBadge}>
+                <Text style={styles.iconBadgeText}>3</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
 
         {/* Hero Content */}
         <View style={styles.heroContent}>
           {/* Crown Icon */}
           <View style={styles.crownContainer}>
-            <Text style={styles.crownIcon}>👑</Text>
+            <Icon name="trophy" size={48} color="#FFD700" />
           </View>
 
           {/* Main Title */}
@@ -128,9 +145,12 @@ const HomeScreenWeb = () => {
           <Text style={styles.heroSubtitle1}>
             Bắt đầu hành trình hoàn thiện bản thân
           </Text>
-          <Text style={styles.heroSubtitle2}>
-            Nơi ước mơ trở thành hiện thực ✨
-          </Text>
+          <View style={styles.heroSubtitle2Container}>
+            <Text style={styles.heroSubtitle2}>
+              Nơi ước mơ trở thành hiện thực
+            </Text>
+            <Icon name="star" size={18} color="#FFD700" style={styles.sparkleIcon} />
+          </View>
 
           {/* CTA Buttons */}
           <View style={styles.heroCTAContainer}>
@@ -144,9 +164,9 @@ const HomeScreenWeb = () => {
                 end={{ x: 1, y: 0 }}
                 style={styles.ctaPrimary}
               >
-                <Text style={styles.ctaIcon}>⚡</Text>
+                <Icon name="flash" size={20} color="#FFFFFF" />
                 <Text style={styles.ctaText}>KHÁM PHÁ NGAY</Text>
-                <Text style={styles.ctaArrow}>→</Text>
+                <Icon name="arrow-forward" size={20} color="#FFFFFF" />
               </LinearGradient>
             </TouchableOpacity>
 
@@ -160,9 +180,9 @@ const HomeScreenWeb = () => {
                 end={{ x: 1, y: 0 }}
                 style={styles.ctaSecondary}
               >
-                <Text style={styles.ctaIcon}>👑</Text>
+                <Icon name="diamond" size={20} color="#FFFFFF" />
                 <Text style={styles.ctaText}>GÓI VIP</Text>
-                <Text style={styles.ctaArrow}>→</Text>
+                <Icon name="arrow-forward" size={20} color="#FFFFFF" />
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -303,7 +323,7 @@ const HomeScreenWeb = () => {
             { icon: '📊', label: 'Lịch sử', screen: 'History', colors: ['#fa709a', '#fee140'] },
             { icon: '💬', label: 'Chat', screen: 'ChatList', colors: ['#a18cd1', '#fbc2eb'] },
             { icon: '📏', label: 'Số đo', screen: 'BodyMetrics', colors: ['#ffecd2', '#fcb69f'] },
-            { icon: '🎯', label: 'Mục tiêu', screen: 'Goals', colors: ['#ff9a9e', '#fecfef'] },
+
           ].map((item, index) => (
             <TouchableOpacity
               key={index}
@@ -408,7 +428,7 @@ const styles = StyleSheet.create({
   // Hero Section
   heroSection: {
     minHeight: 500,
-    paddingTop: 60,
+    paddingTop: 48,
     paddingHorizontal: 24,
     paddingBottom: 40,
     position: 'relative',
@@ -447,28 +467,30 @@ const styles = StyleSheet.create({
     height: 100,
     backgroundColor: '#f59e0b',
   },
-  bellButton: {
+  topRightIcons: {
     position: 'absolute',
     top: 60,
     right: 24,
     zIndex: 10,
+    flexDirection: 'row',
+    gap: 12,
   },
-  bellGradient: {
+  iconButton: {},
+  iconGradient: {
     width: 56,
     height: 56,
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#ec4899',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 8,
   },
-  bellIcon: {
-    fontSize: 26,
+  iconText: {
+    fontSize: 24,
   },
-  bellBadge: {
+  iconBadge: {
     position: 'absolute',
     top: 0,
     right: 0,
@@ -480,6 +502,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#fff',
+  },
+  iconBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   bellBadgeText: {
     color: '#fff',
@@ -524,12 +551,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
+  heroSubtitle2Container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 32,
+    gap: 8,
+  },
   heroSubtitle2: {
     fontSize: 20,
     color: '#fbcfe8', // pink-300
     textAlign: 'center',
     fontWeight: '600',
-    marginBottom: 32,
+  },
+  sparkleIcon: {
+    marginTop: 2,
   },
   heroCTAContainer: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import User from "../models/User.js";
-import { v2 as cloudinary } from "cloudinary";
+import { cloudinary, uploadToCloudinary } from "../config/cloudinary.js";
 
 console.log("Image controller loaded");
 
@@ -15,7 +15,6 @@ export const uploadAvatar = async (req, res) => {
           originalname: req.file.originalname,
           mimetype: req.file.mimetype,
           size: req.file.size,
-          hasCloudinary: !!req.file.cloudinary,
         }
       : "No file"
   );
@@ -47,20 +46,22 @@ export const uploadAvatar = async (req, res) => {
 
     console.log("Permission check passed");
 
-    // Check file và cloudinary result
-    if (!req.file) {
+    // Check file
+    if (!req.file || !req.file.buffer) {
       console.log("No file received");
       return res.status(400).json({ message: "No file received" });
     }
 
-    // Kiểm tra có cloudinary result hoặc path từ multer-storage-cloudinary
-    const imageUrl = req.file.path || req.file.secure_url || req.file.url;
-    const publicId = req.file.filename || req.file.public_id;
-
-    if (!imageUrl) {
-      console.log("No image URL found");
-      return res.status(400).json({ message: "Image upload failed - no URL" });
+    // Upload to Cloudinary using buffer
+    const cloudinaryResult = await uploadToCloudinary(req.file.buffer, 'avatars');
+    
+    if (!cloudinaryResult || !cloudinaryResult.secure_url) {
+      console.log("Cloudinary upload failed");
+      return res.status(400).json({ message: "Image upload failed" });
     }
+
+    const imageUrl = cloudinaryResult.secure_url;
+    const publicId = cloudinaryResult.public_id;
 
     console.log("Image URL:", imageUrl);
     console.log("Public ID:", publicId);

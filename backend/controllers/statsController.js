@@ -253,27 +253,31 @@ export const getUserStats = async (req, res) => {
     // Get total enrolled classes
     const enrollments = await ClassEnrollment.find({ 
       user: userId,
-      status: { $in: ['active', 'completed'] }
-    });
+      status: true, // Active enrollments
+      paymentStatus: true // Paid enrollments
+    }).populate('class');
     const totalClasses = enrollments.length;
 
-    // Get total attendance
+    // Get total attendance records
     const attendances = await Attendance.find({ 
-      user: userId,
-      status: 'present'
-    }).sort({ date: -1 });
+      userId: userId, // Fixed: use userId instead of user
+      isPresent: true
+    }).sort({ sessionDate: -1 });
     const totalAttendance = attendances.length;
 
-    // Calculate attendance rate
-    const attendanceRate = totalClasses > 0 ? (totalAttendance / totalClasses) * 100 : 0;
+    // Get all attendance records (including absent) for rate calculation
+    const allAttendances = await Attendance.find({ userId: userId });
+    const attendanceRate = allAttendances.length > 0 
+      ? Math.round((totalAttendance / allAttendances.length) * 100) 
+      : 0;
 
     // Get total payments and spent
     const payments = await Payment.find({ 
       user: userId,
-      status: 'completed'
+      status: 'approved'
     });
     const totalPayments = payments.length;
-    const totalSpent = payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalSpent = payments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
 
     // Calculate streaks
     const { currentStreak, longestStreak } = calculateStreaks(attendances);
@@ -312,9 +316,9 @@ const calculateStreaks = (attendances) => {
     return { currentStreak: 0, longestStreak: 0 };
   }
 
-  // Sort by date descending
+  // Sort by sessionDate descending
   const sortedDates = attendances
-    .map(a => new Date(a.date))
+    .map(a => new Date(a.sessionDate))
     .sort((a, b) => b.getTime() - a.getTime());
 
   let currentStreak = 0;
@@ -376,7 +380,7 @@ const getMonthlyAttendance = (attendances) => {
   const months = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
   
   attendances.forEach(attendance => {
-    const date = new Date(attendance.date);
+    const date = new Date(attendance.sessionDate); // Fixed: use sessionDate
     const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
     const monthLabel = `${months[date.getMonth()]}/${date.getFullYear().toString().slice(2)}`;
     
@@ -406,25 +410,25 @@ const getRecentActivities = async (userId) => {
 
     // Get recent attendances
     const recentAttendances = await Attendance.find({ 
-      user: userId,
-      status: 'present'
+      userId: userId, // Fixed: use userId
+      isPresent: true // Fixed: use isPresent
     })
-    .sort({ date: -1 })
+    .sort({ sessionDate: -1 }) // Fixed: use sessionDate
     .limit(5)
-    .populate('class', 'name');
+    .populate('classId', 'className'); // Fixed: populate classId with className
 
     recentAttendances.forEach(attendance => {
       activities.push({
-        date: attendance.date,
+        date: attendance.sessionDate,
         type: 'attendance',
-        description: `Điểm danh lớp ${attendance.class?.name || 'N/A'}`,
+        description: `Điểm danh lớp ${attendance.classId?.className || 'N/A'}`,
       });
     });
 
     // Get recent payments
     const recentPayments = await Payment.find({ 
       user: userId,
-      status: 'completed'
+      status: 'approved' // Fixed: use approved
     })
     .sort({ createdAt: -1 })
     .limit(5);
@@ -433,7 +437,7 @@ const getRecentActivities = async (userId) => {
       activities.push({
         date: payment.createdAt,
         type: 'payment',
-        description: `Thanh toán ${payment.amount.toLocaleString('vi-VN')}đ`,
+        description: `Thanh toán ${(payment.amount || 0).toLocaleString('vi-VN')}đ`,
       });
     });
 
@@ -441,15 +445,15 @@ const getRecentActivities = async (userId) => {
     const recentEnrollments = await ClassEnrollment.find({ 
       user: userId 
     })
-    .sort({ createdAt: -1 })
+    .sort({ enrollmentDate: -1 }) // Fixed: use enrollmentDate
     .limit(5)
-    .populate('class', 'name');
+    .populate('class', 'className'); // Fixed: use className
 
     recentEnrollments.forEach(enrollment => {
       activities.push({
-        date: enrollment.createdAt,
+        date: enrollment.enrollmentDate,
         type: 'enrollment',
-        description: `Đăng ký lớp ${enrollment.class?.name || 'N/A'}`,
+        description: `Đăng ký lớp ${enrollment.class?.className || 'N/A'}`,
       });
     });
 
@@ -459,6 +463,154 @@ const getRecentActivities = async (userId) => {
       .slice(0, 10);
   } catch (error) {
     console.error("Error getting recent activities:", error);
+    return [];
+  }
+};
+
+// Get instructor statistics
+export const getInstructorStats = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Validate instructor exists
+    const instructor = await User.findById(userId);
+    if (!instructor || instructor.role !== 'trainer') {
+      return res.status(404).json({ message: "Instructor not found" });
+    }
+
+    // Get total classes taught by this instructor
+    const classes = await Class.find({ 
+      instructor: userId,
+      status: { $in: ['ongoing', 'completed', 'upcoming'] }
+    });
+    const totalClasses = classes.length;
+
+    // Get total attendance sessions where instructor was present
+    const classIds = classes.map(c => c._id);
+    
+    // Count unique sessions (distinct sessionNumber per class)
+    const uniqueSessions = await Attendance.aggregate([
+      { 
+        $match: { 
+          classId: { $in: classIds }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            classId: '$classId',
+            sessionNumber: '$sessionNumber'
+          }
+        }
+      },
+      {
+        $count: 'totalSessions'
+      }
+    ]);
+    
+    const totalAttendance = uniqueSessions.length > 0 ? uniqueSessions[0].totalSessions : 0;
+    
+    // Get attendances for streak calculation
+    const attendances = await Attendance.find({ 
+      classId: { $in: classIds }
+    })
+    .sort({ sessionDate: -1 })
+    .limit(100); // Limit for performance
+
+    // Calculate attendance rate across all classes
+    const allAttendances = await Attendance.find({ classId: { $in: classIds } });
+    const attendanceRate = allAttendances.length > 0 
+      ? Math.round((totalAttendance / allAttendances.length) * 100) 
+      : 0;
+
+    // Calculate total earnings from paid enrollments
+    const enrollments = await ClassEnrollment.find({
+      class: { $in: classIds },
+      paymentStatus: true
+    }).populate('class', 'price');
+    
+    const totalSpent = enrollments.reduce((sum, enrollment) => {
+      return sum + (enrollment.class?.price || 0);
+    }, 0);
+    const totalPayments = enrollments.length;
+
+    // Calculate streaks based on teaching sessions
+    const { currentStreak, longestStreak } = calculateStreaks(attendances);
+
+    // Get monthly teaching stats
+    const monthlyAttendance = getMonthlyAttendance(attendances);
+
+    // Get recent activities for instructor
+    const recentActivities = await getInstructorRecentActivities(userId, classIds);
+
+    const stats = {
+      totalClasses,
+      totalAttendance,
+      attendanceRate,
+      totalPayments,
+      totalSpent,
+      currentStreak,
+      longestStreak,
+      monthlyAttendance,
+      recentActivities,
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error("Error fetching instructor stats:", error);
+    res.status(500).json({ 
+      message: "Error fetching instructor statistics",
+      error: error.message 
+    });
+  }
+};
+
+// Helper function to get instructor recent activities
+const getInstructorRecentActivities = async (instructorId, classIds) => {
+  try {
+    const activities = [];
+
+    // Get recent teaching sessions
+    const recentSessions = await Attendance.find({ 
+      classId: { $in: classIds },
+      isPresent: true
+    })
+    .sort({ sessionDate: -1 })
+    .limit(10)
+    .populate('classId', 'className');
+
+    recentSessions.forEach(session => {
+      activities.push({
+        date: session.sessionDate,
+        type: 'teaching',
+        description: `Dạy lớp ${session.classId?.className || 'N/A'}`,
+      });
+    });
+
+    // Get recent class enrollments
+    const recentEnrollments = await ClassEnrollment.find({ 
+      class: { $in: classIds },
+      paymentStatus: true
+    })
+    .sort({ enrollmentDate: -1 })
+    .limit(5)
+    .populate('class', 'className')
+    .populate('user', 'fullName');
+
+    recentEnrollments.forEach(enrollment => {
+      activities.push({
+        date: enrollment.enrollmentDate,
+        type: 'enrollment',
+        description: `${enrollment.user?.fullName || 'Học viên'} đăng ký ${enrollment.class?.className || 'lớp học'}`,
+      });
+    });
+
+    // Sort all activities by date and return top 10
+    return activities
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 10);
+  } catch (error) {
+    console.error("Error getting instructor activities:", error);
     return [];
   }
 };

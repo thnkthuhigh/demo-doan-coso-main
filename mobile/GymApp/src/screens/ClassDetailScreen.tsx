@@ -46,6 +46,11 @@ const ClassDetailScreen = ({ route, navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [enrollmentStatus, setEnrollmentStatus] = useState<{
+    isPaid: boolean;
+    isPending: boolean;
+    enrollmentId?: string;
+  } | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -110,9 +115,35 @@ const ClassDetailScreen = ({ route, navigation }: any) => {
       const userId = (user as any)?._id || (user as any)?.id;
       if (!userId) return;
       
-      const response = await apiService.get(`/classes/user/${userId}`);
-      const enrolledClasses = response as any[];
-      setIsEnrolled(enrolledClasses.some((c: any) => c._id === classId));
+      // Fetch enrollments and payments
+      const [enrollmentsData, paymentsData] = await Promise.all([
+        apiService.get(`/classes/user/${userId}`),
+        apiService.get('/payments/user').catch(() => [])
+      ]);
+      
+      const enrolledClasses = enrollmentsData as any[];
+      const enrollment = enrolledClasses.find((c: any) => c._id === classId || c.class?._id === classId || c.classId === classId);
+      
+      if (enrollment) {
+        setIsEnrolled(true);
+        
+        // Check if this enrollment has pending payment
+        const payments = Array.isArray(paymentsData) ? paymentsData : [];
+        const hasPendingPayment = payments.some((p: any) => 
+          p.status === 'pending' && 
+          p.registrationIds && 
+          p.registrationIds.includes(enrollment._id)
+        );
+        
+        setEnrollmentStatus({
+          isPaid: enrollment.paymentStatus === true,
+          isPending: hasPendingPayment,
+          enrollmentId: enrollment._id
+        });
+      } else {
+        setIsEnrolled(false);
+        setEnrollmentStatus(null);
+      }
     } catch (error) {
       console.error('Error checking enrollment:', error);
     }
@@ -147,7 +178,8 @@ const ClassDetailScreen = ({ route, navigation }: any) => {
               try {
                 setEnrolling(true);
                 const userId = (user as any)?._id || (user as any)?.id;
-                await apiService.post(`/classes/${classId}/enroll`, {
+                await apiService.post('/classes/enroll', {
+                  classId: classId,
                   userId: userId,
                 });
                 Alert.alert('Thành công', 'Đăng ký lớp học thành công!');
@@ -166,8 +198,40 @@ const ClassDetailScreen = ({ route, navigation }: any) => {
         ]
       );
     } else {
-      // Lớp có phí - hiển thị payment modal
-      setShowPaymentModal(true);
+      // Lớp có phí - thêm vào giỏ hàng
+      Alert.alert(
+        'Thêm vào giỏ hàng',
+        `Thêm "${classDetail?.name}" vào giỏ hàng?`,
+        [
+          { text: 'Hủy', style: 'cancel' },
+          {
+            text: 'Thêm vào giỏ hàng',
+            onPress: async () => {
+              try {
+                setEnrolling(true);
+                const userId = (user as any)?._id || (user as any)?.id;
+                await apiService.post('/classes/enroll', {
+                  classId: classId,
+                  userId: userId,
+                });
+                Alert.alert(
+                  'Đã thêm vào giỏ hàng',
+                  'Lớp học đã được thêm vào giỏ hàng. Vào giỏ hàng để thanh toán.',
+                  [
+                    { text: 'Tiếp tục xem', style: 'cancel' },
+                    { text: 'Xem giỏ hàng', onPress: () => navigation.navigate('Cart') },
+                  ]
+                );
+                fetchClassDetail();
+              } catch (error: any) {
+                Alert.alert('Lỗi', error.message || 'Không thể thêm vào giỏ hàng');
+              } finally {
+                setEnrolling(false);
+              }
+            },
+          },
+        ]
+      );
     }
   };
 
@@ -176,7 +240,8 @@ const ClassDetailScreen = ({ route, navigation }: any) => {
     try {
       setEnrolling(true);
       const userId = (user as any)?._id || (user as any)?.id;
-      await apiService.post(`/classes/${classId}/enroll`, {
+      await apiService.post('/classes/enroll', {
+        classId: classId,
         userId: userId,
       });
       setIsEnrolled(true);
@@ -205,6 +270,24 @@ const ClassDetailScreen = ({ route, navigation }: any) => {
       'Sunday': 'Chủ nhật',
     };
     return days[day] || day;
+  };
+
+  const calculateDuration = (startTime: string, endTime: string): number => {
+    try {
+      // Parse times (format: "HH:MM")
+      const [startHour, startMin] = startTime.split(':').map(Number);
+      const [endHour, endMin] = endTime.split(':').map(Number);
+      
+      // Convert to minutes
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+      
+      // Calculate duration
+      return endMinutes - startMinutes;
+    } catch (error) {
+      console.error('Error calculating duration:', error);
+      return 60; // Default fallback
+    }
   };
 
   if (loading) {
@@ -278,21 +361,24 @@ const ClassDetailScreen = ({ route, navigation }: any) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📅 Lịch học</Text>
           {classDetail.schedule && classDetail.schedule.length > 0 ? (
-            classDetail.schedule.map((sch, index) => (
-              <View key={index} style={styles.scheduleCard}>
-                <View style={styles.scheduleLeft}>
-                  <Text style={styles.dayName}>{getDayName(sch.dayOfWeek)}</Text>
+            classDetail.schedule.map((sch, index) => {
+              const duration = calculateDuration(sch.startTime, sch.endTime);
+              return (
+                <View key={index} style={styles.scheduleCard}>
+                  <View style={styles.scheduleLeft}>
+                    <Text style={styles.dayName}>{getDayName(sch.dayOfWeek)}</Text>
+                  </View>
+                  <View style={styles.scheduleRight}>
+                    <Text style={styles.scheduleTime}>
+                      ⏰ {sch.startTime} - {sch.endTime}
+                    </Text>
+                    <Text style={styles.scheduleDuration}>
+                      ⏱️ {duration} phút
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.scheduleRight}>
-                  <Text style={styles.scheduleTime}>
-                    ⏰ {sch.startTime} - {sch.endTime}
-                  </Text>
-                  <Text style={styles.scheduleDuration}>
-                    ⏱️ {classDetail.duration} phút
-                  </Text>
-                </View>
-              </View>
-            ))
+              );
+            })
           ) : (
             <Text style={styles.noSchedule}>Chưa có lịch học</Text>
           )}
@@ -389,22 +475,44 @@ const ClassDetailScreen = ({ route, navigation }: any) => {
 
       {/* Enroll Button */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.enrollButton,
-            (isEnrolled || isFull || enrolling) && styles.enrollButtonDisabled,
-          ]}
-          onPress={handleEnroll}
-          disabled={isEnrolled || isFull || enrolling}
-        >
-          {enrolling ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.enrollButtonText}>
-              {isEnrolled ? '✓ Đã đăng ký' : isFull ? 'Đã đầy' : 'Đăng ký ngay'}
-            </Text>
-          )}
-        </TouchableOpacity>
+        {enrollmentStatus?.isPending ? (
+          <View style={styles.statusContainer}>
+            <Text style={styles.statusIcon}>⏳</Text>
+            <View style={styles.statusTextContainer}>
+              <Text style={styles.statusTitle}>Đang chờ xác nhận thanh toán</Text>
+              <Text style={styles.statusSubtitle}>
+                Admin sẽ xác nhận sau khi nhận thanh toán. Kiểm tra trạng thái tại màn hình Lịch sử.
+              </Text>
+            </View>
+          </View>
+        ) : enrollmentStatus?.isPaid ? (
+          <View style={styles.statusContainer}>
+            <Text style={styles.statusIcon}>✅</Text>
+            <View style={styles.statusTextContainer}>
+              <Text style={styles.statusTitle}>Đã thanh toán thành công</Text>
+              <Text style={styles.statusSubtitle}>
+                Bạn đã là thành viên chính thức của lớp học này
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.enrollButton,
+              (isEnrolled || isFull || enrolling) && styles.enrollButtonDisabled,
+            ]}
+            onPress={handleEnroll}
+            disabled={isEnrolled || isFull || enrolling}
+          >
+            {enrolling ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.enrollButtonText}>
+                {isEnrolled ? '✓ Đã đăng ký' : isFull ? 'Đã đầy' : 'Đăng ký ngay'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Payment Modal */}
@@ -477,7 +585,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#fff',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 48,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
@@ -650,6 +758,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  statusContainer: {
+    backgroundColor: '#f0f9ff',
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+  },
+  statusIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  statusTextContainer: {
+    flex: 1,
+  },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0369a1',
+    marginBottom: 4,
+  },
+  statusSubtitle: {
+    fontSize: 14,
+    color: '#0c4a6e',
+    lineHeight: 20,
   },
   reviewsHeader: {
     flexDirection: 'row',

@@ -51,7 +51,7 @@ export const getAllClasses = async (req, res) => {
       .populate("service", "name image")
       .sort({ startDate: 1 });
 
-    // Update status cho tất cả classes
+    // Update status và format response
     const updatedClasses = await Promise.all(
       classes.map(async (classItem) => {
         const newStatus = updateClassStatus(classItem);
@@ -61,7 +61,36 @@ export const getAllClasses = async (req, res) => {
           await classItem.save();
         }
 
-        return classItem;
+        // Return full class data for admin panel, with mobile-friendly format too
+        return {
+          _id: classItem._id,
+          className: classItem.className,
+          name: classItem.className, // For mobile compatibility
+          serviceName: classItem.serviceName,
+          service: classItem.service,
+          serviceId: classItem.service, // For mobile compatibility
+          instructorName: classItem.instructorName,
+          instructor: {
+            _id: classItem.instructor,
+            fullName: classItem.instructorName,
+          },
+          description: classItem.description,
+          maxMembers: classItem.maxMembers,
+          capacity: classItem.maxMembers, // For mobile compatibility
+          currentMembers: classItem.currentMembers,
+          enrolled: classItem.currentMembers, // For mobile compatibility
+          totalSessions: classItem.totalSessions,
+          currentSession: classItem.currentSession,
+          price: classItem.price,
+          startDate: classItem.startDate,
+          endDate: classItem.endDate,
+          schedule: classItem.schedule,
+          location: classItem.location,
+          requirements: classItem.requirements,
+          status: classItem.status,
+          createdAt: classItem.createdAt,
+          updatedAt: classItem.updatedAt,
+        };
       })
     );
 
@@ -82,6 +111,7 @@ export const createClass = async (req, res) => {
       className,
       serviceId,
       serviceName,
+      instructorId,
       instructorName,
       description,
       maxMembers,
@@ -94,19 +124,56 @@ export const createClass = async (req, res) => {
       requirements,
     } = req.body;
 
-    // Validate service exists
-    if (serviceId) {
-      const service = await Service.findById(serviceId);
-      if (!service) {
-        return res.status(404).json({ message: "Dịch vụ không tồn tại" });
+    console.log("Creating class with data:", {
+      className,
+      serviceId,
+      serviceName,
+      instructorId,
+      instructorName,
+      maxMembers,
+      totalSessions,
+      price,
+      startDate,
+      endDate,
+      schedule,
+    });
+
+    // Validate required fields
+    if (!serviceId) {
+      return res.status(400).json({ message: "Vui lòng chọn dịch vụ" });
+    }
+
+    // Validate service exists and get service name
+    const service = await Service.findById(serviceId);
+    if (!service) {
+      return res.status(404).json({ message: "Dịch vụ không tồn tại" });
+    }
+
+    // Validate instructor if provided
+    let instructorData = null;
+    if (instructorId) {
+      const User = (await import("../models/User.js")).default;
+      instructorData = await User.findById(instructorId);
+      
+      if (!instructorData) {
+        return res.status(404).json({ message: "Huấn luyện viên không tồn tại" });
+      }
+      
+      if (instructorData.role !== "trainer") {
+        return res.status(400).json({ 
+          message: "User không phải là huấn luyện viên",
+          currentRole: instructorData.role,
+          expectedRole: "trainer"
+        });
       }
     }
 
     const newClass = new Class({
       className,
-      service: serviceId, // Sử dụng service thay vì serviceId
-      serviceName,
-      instructorName,
+      service: serviceId,
+      serviceName: serviceName || service.name,
+      instructor: instructorId || null,
+      instructorName: instructorName || instructorData?.fullName || "",
       description,
       maxMembers,
       totalSessions,
@@ -120,9 +187,12 @@ export const createClass = async (req, res) => {
 
     await newClass.save();
 
-    if (serviceId) {
-      await newClass.populate("service", "name image");
-    }
+    await newClass.populate([
+      { path: "service", select: "name image" },
+      { path: "instructor", select: "fullName email role" }
+    ]);
+
+    console.log("Class created successfully:", newClass._id);
 
     res.status(201).json(newClass);
   } catch (error) {
@@ -173,28 +243,40 @@ export const deleteClass = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Kiểm tra xem có học viên đã đăng ký chưa
-    const enrollmentCount = await ClassEnrollment.countDocuments({ class: id });
-    if (enrollmentCount > 0) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        message: "Không thể xóa lớp học đã có học viên đăng ký",
-      });
-    }
-
-    // Xóa lớp học
-    const deletedClass = await Class.findByIdAndDelete(id).session(session);
-    if (!deletedClass) {
+    // Kiểm tra lớp học tồn tại
+    const classToDelete = await Class.findById(id);
+    if (!classToDelete) {
       await session.abortTransaction();
       session.endSession();
       return res.status(404).json({ message: "Không tìm thấy lớp học" });
     }
 
+    // Chỉ kiểm tra enrollment còn active (chưa hoàn thành)
+    // Cho phép xóa lớp đã hoàn thành hoặc đã hủy
+    const activeEnrollmentCount = await ClassEnrollment.countDocuments({ 
+      class: id,
+      status: { $in: ['active', 'pending'] } // Chỉ đếm enrollment đang active hoặc pending
+    });
+    
+    if (activeEnrollmentCount > 0) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        message: "Không thể xóa lớp học còn học viên đang học. Vui lòng hoàn thành hoặc hủy lớp trước.",
+      });
+    }
+
+    // Xóa lớp học và tất cả enrollment đã hoàn thành/hủy của nó
+    await ClassEnrollment.deleteMany({ class: id }).session(session);
+    const deletedClass = await Class.findByIdAndDelete(id).session(session);
+
     await session.commitTransaction();
     session.endSession();
 
-    res.status(200).json({ message: "Xóa lớp học thành công" });
+    res.status(200).json({ 
+      message: "Xóa lớp học thành công",
+      deletedClass: deletedClass.className 
+    });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -227,7 +309,27 @@ export const getClassById = async (req, res) => {
       await classItem.save();
     }
 
-    res.status(200).json(classItem);
+    // Format response cho mobile app
+    const response = {
+      _id: classItem._id,
+      name: classItem.className,
+      description: classItem.description,
+      instructor: {
+        _id: classItem.instructor,
+        fullName: classItem.instructorName,
+        email: classItem.instructorEmail || '',
+      },
+      schedule: classItem.schedule,
+      capacity: classItem.maxMembers,
+      enrolled: classItem.currentMembers,
+      price: classItem.price,
+      duration: classItem.duration || 60,
+      location: classItem.location,
+      serviceId: classItem.service,
+      status: classItem.status,
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error("Error fetching class details:", error);
     res.status(500).json({
@@ -307,11 +409,28 @@ export const enrollClass = async (req, res) => {
 
   try {
     const { classId } = req.body;
-    // Sửa lại để handle cả userId và id
-    const userId = req.user.userId || req.user.id;
+    const userId = req.user._id;
 
     console.log("User from middleware:", req.user);
     console.log("Enrolling user:", userId, "to class:", classId);
+
+    // Validate classId
+    if (!classId) {
+      await session.abortTransaction();
+      session.endSession();
+      return res
+        .status(400)
+        .json({ message: "ClassId không được cung cấp" });
+    }
+
+    // Validate classId format
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      await session.abortTransaction();
+      session.endSession();
+      return res
+        .status(400)
+        .json({ message: "ClassId không hợp lệ" });
+    }
 
     // Validate userId
     if (!userId) {
@@ -330,11 +449,20 @@ export const enrollClass = async (req, res) => {
       return res.status(404).json({ message: "Lớp học không tồn tại" });
     }
 
-    // Kiểm tra còn chỗ trống
-    if (classDoc.currentMembers >= classDoc.maxMembers) {
+    // Kiểm tra tổng số chỗ (bao gồm cả đang giữ chỗ chưa thanh toán)
+    const totalEnrollments = await ClassEnrollment.countDocuments({
+      class: classId,
+      status: { $ne: 'cancelled' },
+      $or: [
+        { paymentStatus: true },
+        { expiresAt: { $gt: new Date() } }
+      ]
+    }).session(session);
+
+    if (totalEnrollments >= classDoc.maxMembers) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(400).json({ message: "Lớp học đã đầy" });
+      return res.status(400).json({ message: "Lớp học đã đầy. Vui lòng chọn lớp khác." });
     }
 
     // Kiểm tra user đã đăng ký chưa
@@ -346,9 +474,19 @@ export const enrollClass = async (req, res) => {
     if (existingEnrollment) {
       await session.abortTransaction();
       session.endSession();
+      console.log("Existing enrollment found:", {
+        id: existingEnrollment._id,
+        user: existingEnrollment.user,
+        class: existingEnrollment.class,
+        paymentStatus: existingEnrollment.paymentStatus,
+      });
       return res
         .status(400)
-        .json({ message: "Bạn đã đăng ký lớp học này rồi" });
+        .json({ 
+          message: "Bạn đã đăng ký lớp học này rồi",
+          enrollmentId: existingEnrollment._id,
+          paymentStatus: existingEnrollment.paymentStatus
+        });
     }
 
     // Tạo đăng ký mới
@@ -365,16 +503,11 @@ export const enrollClass = async (req, res) => {
       userId,
       "class",
       "Đăng ký lớp học thành công",
-      `Bạn đã đăng ký lớp "${classDoc.name}" thành công! Vui lòng thanh toán để tham gia lớp học.`,
-      { classId, className: classDoc.name }
+      `Bạn đã đăng ký lớp "${classDoc.className}" thành công! Vui lòng thanh toán để tham gia lớp học.`,
+      { classId, className: classDoc.className }
     );
 
-    // Cập nhật số lượng thành viên trong lớp
-    await Class.findByIdAndUpdate(
-      classId,
-      { $inc: { currentMembers: 1 } },
-      { session }
-    );
+    // NOTE: currentMembers sẽ được cập nhật khi thanh toán được approve
 
     await session.commitTransaction();
     session.endSession();
@@ -433,20 +566,59 @@ export const getUserClasses = async (req, res) => {
       })
       .sort({ enrollmentDate: -1 });
 
-    // Update status cho tất cả classes
+    console.log(`Found ${enrollments.length} enrollments for user ${userId}`);
+    
+    const orphanedEnrollments = enrollments.filter(e => !e.class);
+    console.log("Enrollments with null class:", orphanedEnrollments.length);
+    
+    // Cleanup orphaned enrollments (where class was deleted)
+    if (orphanedEnrollments.length > 0) {
+      console.log("Cleaning up orphaned enrollments...");
+      await ClassEnrollment.deleteMany({
+        _id: { $in: orphanedEnrollments.map(e => e._id) }
+      });
+      console.log(`Deleted ${orphanedEnrollments.length} orphaned enrollments`);
+    }
+
+    // Update status và format response cho cart
     const updatedEnrollments = await Promise.all(
-      enrollments.map(async (enrollment) => {
-        if (enrollment.class) {
+      enrollments
+        .filter(enrollment => enrollment.class) // Filter out enrollments with deleted classes
+        .map(async (enrollment) => {
           const newStatus = updateClassStatus(enrollment.class);
 
           if (enrollment.class.status !== newStatus) {
             enrollment.class.status = newStatus;
             await enrollment.class.save();
           }
-        }
 
-        return enrollment;
-      })
+          // Format cho CartScreen và trả về full enrollment object
+          return {
+            _id: enrollment._id,
+            user: enrollment.user,
+            class: {
+              _id: enrollment.class._id,
+              className: enrollment.class.className,
+              serviceName: enrollment.class.serviceName,
+              instructorName: enrollment.class.instructorName,
+              price: enrollment.class.price,
+              schedule: enrollment.class.schedule,
+              location: enrollment.class.location,
+              status: enrollment.class.status,
+            },
+            classId: enrollment.class._id,
+            name: enrollment.class.className,
+            serviceName: enrollment.class.serviceName,
+            instructorName: enrollment.class.instructorName,
+            price: enrollment.class.price,
+            schedule: enrollment.class.schedule,
+            location: enrollment.class.location,
+            paymentStatus: enrollment.paymentStatus,
+            enrollmentDate: enrollment.enrollmentDate,
+            status: enrollment.status,
+            remainingSessions: enrollment.remainingSessions,
+          };
+        })
     );
 
     res.status(200).json(updatedEnrollments);
@@ -466,8 +638,7 @@ export const deleteEnrollment = async (req, res) => {
 
   try {
     const { enrollmentId } = req.params;
-    // Sửa lại để handle cả userId và id
-    const userId = req.user.userId || req.user.id;
+    const userId = req.user._id;
 
     console.log("User from middleware:", req.user);
     console.log("Deleting enrollment:", enrollmentId, "by user:", userId);

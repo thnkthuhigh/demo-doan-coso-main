@@ -1,7 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
 import multer from "multer";
 import dotenv from "dotenv";
+import { Readable } from "stream";
 
 dotenv.config();
 
@@ -13,29 +13,46 @@ cloudinary.config({
     process.env.CLOUDINARY_API_SECRET || "iiVeKkwHqHmbScrWTqmYRWxT5M4",
 });
 
-// Create storage engine for Multer with public access
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: "avatars",
-    allowed_formats: ["jpg", "jpeg", "png", "gif"],
-    transformation: [
-      { width: 500, height: 500, crop: "limit" },
-      { quality: "auto:good" },
-    ],
-    // Ensure images are publicly accessible
-    resource_type: "auto",
-    public_id: (req, file) => {
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      return `user-avatar-${uniqueSuffix}`;
-    },
-  },
-});
+// Use memory storage instead of CloudinaryStorage
+const storage = multer.memoryStorage();
 
-// Configure Multer with the storage engine
+// Configure Multer with the memory storage
 const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (allowedFormats.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
 });
+
+// Helper function to upload buffer to Cloudinary
+export const uploadToCloudinary = (buffer, folder = 'avatars') => {
+  return new Promise((resolve, reject) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: folder,
+        public_id: `user-avatar-${uniqueSuffix}`,
+        transformation: [
+          { width: 500, height: 500, crop: "limit" },
+          { quality: "auto:good" },
+        ],
+        resource_type: "auto",
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    
+    const readableStream = Readable.from(buffer);
+    readableStream.pipe(stream);
+  });
+};
 
 export { cloudinary, upload };

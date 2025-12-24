@@ -17,6 +17,7 @@ const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
 
   const handleLogin = async () => {
@@ -25,15 +26,38 @@ const LoginScreen = ({ navigation }: any) => {
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Lỗi', 'Email không hợp lệ');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await login(email, password);
+      console.log('Attempting login with email:', email);
+      await login(email.trim().toLowerCase(), password);
+      console.log('Login successful');
       // Navigation will be handled by AuthContext
     } catch (error: any) {
-      Alert.alert(
-        'Đăng nhập thất bại',
-        error.message || 'Email hoặc mật khẩu không đúng'
-      );
+      console.error('Login error:', error);
+      console.error('Error message:', error?.message);
+      
+      let errorMessage = 'Email hoặc mật khẩu không đúng';
+      
+      if (error?.message) {
+        if (error.message.includes('không chính xác') || error.message.includes('incorrect')) {
+          errorMessage = 'Mật khẩu không chính xác';
+        } else if (error.message.includes('không tồn tại') || error.message.includes('not found')) {
+          errorMessage = 'Email chưa được đăng ký';
+        } else if (error.message.includes('kết nối') || error.message.includes('Network')) {
+          errorMessage = 'Không thể kết nối đến server';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('Đăng nhập thất bại', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -57,17 +81,28 @@ const LoginScreen = ({ navigation }: any) => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               editable={!isLoading}
             />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Mật khẩu"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!isLoading}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Mật khẩu"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCorrect={false}
+                autoCapitalize="none"
+                editable={!isLoading}
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[styles.button, isLoading && styles.buttonDisabled]}
@@ -134,6 +169,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: '#ddd',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 15,
+    fontSize: 16,
+  },
+  eyeButton: {
+    padding: 15,
+  },
+  eyeIcon: {
+    fontSize: 20,
   },
   button: {
     backgroundColor: '#007AFF',

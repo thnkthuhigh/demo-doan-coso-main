@@ -32,6 +32,16 @@ const attendanceSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    isLocked: {
+      type: Boolean,
+      default: false,
+      // true = đã điểm danh và không thể chỉnh sửa nữa
+    },
+    markedAt: {
+      type: Date,
+      default: null,
+      // Thời điểm điểm danh lần đầu
+    },
   },
   {
     timestamps: true,

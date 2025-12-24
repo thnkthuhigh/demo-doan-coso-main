@@ -6,27 +6,53 @@ import { AuthResponse, User } from '../types';
 class AuthService {
   async login(email: string, password: string): Promise<AuthResponse> {
     try {
+      console.log('AuthService: Logging in with', { email, passwordLength: password.length });
       const response = await apiService.post<AuthResponse>(
         CONFIG.ENDPOINTS.AUTH.LOGIN,
         { email, password }
       );
 
+      console.log('AuthService: Login response received', { 
+        hasToken: !!response.token, 
+        hasUser: !!response.user 
+      });
+
       if (response.token) {
         await AsyncStorage.setItem('token', response.token);
         await AsyncStorage.setItem('user', JSON.stringify(response.user));
+        console.log('AuthService: Token and user stored successfully');
       }
 
       return response;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('AuthService: Login error', error);
       throw error;
     }
   }
 
-  async register(name: string, email: string, password: string, phone?: string): Promise<AuthResponse> {
+  async register(
+    username: string, 
+    fullName: string, 
+    email: string, 
+    password: string, 
+    phone: string,
+    address: string,
+    dob: string,
+    gender: string
+  ): Promise<AuthResponse> {
     try {
       const response = await apiService.post<AuthResponse>(
         CONFIG.ENDPOINTS.AUTH.REGISTER,
-        { name, email, password, phone }
+        { 
+          username: username.trim(),
+          fullName: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+          phone: phone.trim(),
+          address: address.trim(),
+          dob: new Date(dob).toISOString(),
+          gender
+        }
       );
 
       if (response.token) {

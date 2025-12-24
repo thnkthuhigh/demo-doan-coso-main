@@ -188,13 +188,14 @@ const UserManagement = () => {
   });
 
   const getRoleColor = (role) => {
-    return role === "admin"
-      ? "bg-red-100 text-red-800"
-      : "bg-blue-100 text-blue-800";
+    if (role === "admin") return "bg-red-100 text-red-800";
+    if (role === "trainer") return "bg-purple-100 text-purple-800";
+    return "bg-blue-100 text-blue-800";
   };
 
   const getRoleIcon = (role) => {
-    return role === "admin" ? <Shield size={14} /> : <User size={14} />;
+    if (role === "admin" || role === "trainer") return <Shield size={14} />;
+    return <User size={14} />;
   };
 
   if (loading) {
@@ -264,6 +265,7 @@ const UserManagement = () => {
             >
               <option value="all">Tất cả vai trò</option>
               <option value="admin">Admin</option>
+              <option value="trainer">Huấn luyện viên</option>
               <option value="user">User</option>
             </select>
           </div>
@@ -271,7 +273,7 @@ const UserManagement = () => {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center">
             <div className="p-3 bg-blue-50 rounded-lg">
@@ -294,6 +296,19 @@ const UserManagement = () => {
               <p className="text-sm font-medium text-gray-500">Admin</p>
               <p className="text-2xl font-bold text-gray-900">
                 {users.filter((u) => u.role === "admin").length}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center">
+            <div className="p-3 bg-purple-50 rounded-lg">
+              <Shield className="h-6 w-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Huấn luyện viên</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {users.filter((u) => u.role === "trainer").length}
               </p>
             </div>
           </div>
@@ -373,7 +388,9 @@ const UserManagement = () => {
                     >
                       {getRoleIcon(user.role)}
                       <span className="ml-1">
-                        {user.role === "admin" ? "Admin" : "Người dùng"}
+                        {user.role === "admin" ? "Admin" : 
+                         user.role === "trainer" ? "Huấn luyện viên" :
+                         "Người dùng"}
                       </span>
                     </span>
                   </td>
@@ -529,6 +546,7 @@ const UserManagement = () => {
                   >
                     <option value="user">Người dùng</option>
                     <option value="admin">Admin</option>
+                    <option value="trainer">Huấn luyện viên</option>
                   </select>
                 </div>
 

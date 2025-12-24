@@ -20,6 +20,22 @@ const classEnrollmentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    expiresAt: {
+      type: Date,
+      // Giữ chỗ trong 2 ngày (48h) nếu chưa thanh toán
+      default: function() {
+        return new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+      },
+      index: true,
+    },
+    expiresAt: {
+      type: Date,
+      // Giữ chỗ trong 2 ngày (48h) nếu chưa thanh toán
+      default: function() {
+        return new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+      },
+      index: true, // Index để query nhanh
+    },
     status: {
       type: String,
       enum: ["active", "paused", "completed", "cancelled"],

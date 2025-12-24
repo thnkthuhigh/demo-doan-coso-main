@@ -1,0 +1,15 @@
+# Test update isLocked field
+
+### Login first to get token
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "instructor1@gmail.com",
+  "password": "instructor123"
+}
+
+### Add isLocked field (replace TOKEN with token from login response)
+POST http://localhost:5000/api/attendance/add-locked-field
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
