@@ -225,13 +225,13 @@ export default function MembershipPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 relative overflow-hidden">
-      {/* Enhanced Floating Background Elements */}
+      {/* Compact Floating Background Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <motion.div
           animate={{
-            y: [0, -50, 0],
-            rotate: [0, 20, 0],
-            scale: [1, 1.2, 1],
+            y: [0, -30, 0],
+            rotate: [0, 15, 0],
+            scale: [1, 1.1, 1],
           }}
           transition={{
             duration: 20,
@@ -240,14 +240,13 @@ export default function MembershipPage() {
           }}
           className="absolute top-20 left-20"
         >
-          <Cherry className="h-24 w-24 text-pink-200 opacity-30" />
+          <Cherry className="h-12 w-12 text-pink-200 opacity-20" />
         </motion.div>
 
         <motion.div
           animate={{
-            y: [0, 30, 0],
-            rotate: [0, -25, 0],
-            x: [0, 20, 0],
+            y: [0, 20, 0],
+            rotate: [0, -15, 0],
           }}
           transition={{
             duration: 15,
@@ -257,14 +256,13 @@ export default function MembershipPage() {
           }}
           className="absolute top-32 right-16"
         >
-          <Mountain className="h-28 w-28 text-indigo-200 opacity-25" />
+          <Mountain className="h-14 w-14 text-indigo-200 opacity-15" />
         </motion.div>
 
         <motion.div
           animate={{
-            y: [0, -25, 0],
-            x: [0, 25, 0],
-            scale: [1, 1.1, 1],
+            y: [0, -15, 0],
+            scale: [1, 1.05, 1],
           }}
           transition={{
             duration: 12,
@@ -274,13 +272,12 @@ export default function MembershipPage() {
           }}
           className="absolute bottom-32 left-1/4"
         >
-          <Waves className="h-20 w-20 text-cyan-200 opacity-40" />
+          <Waves className="h-10 w-10 text-cyan-200 opacity-25" />
         </motion.div>
 
         <motion.div
           animate={{
             rotate: [0, 360],
-            scale: [1, 1.4, 1],
           }}
           transition={{
             duration: 25,
@@ -289,13 +286,13 @@ export default function MembershipPage() {
           }}
           className="absolute top-1/2 right-12"
         >
-          <Flower2 className="h-18 w-18 text-rose-200 opacity-35" />
+          <Flower2 className="h-10 w-10 text-rose-200 opacity-20" />
         </motion.div>
 
         <motion.div
           animate={{
-            y: [0, -15, 0],
-            opacity: [0.2, 0.4, 0.2],
+            y: [0, -10, 0],
+            opacity: [0.15, 0.25, 0.15],
           }}
           transition={{
             duration: 8,
@@ -321,13 +318,12 @@ export default function MembershipPage() {
           }}
           className="absolute top-3/4 left-12"
         >
-          <Sun className="h-22 w-22 text-yellow-200 opacity-25" />
+          <Sun className="h-10 w-10 text-yellow-200 opacity-15" />
         </motion.div>
 
         <motion.div
           animate={{
             rotate: [0, -360],
-            y: [0, 20, 0],
           }}
           transition={{
             duration: 18,
@@ -337,7 +333,7 @@ export default function MembershipPage() {
           }}
           className="absolute top-1/4 left-1/3"
         >
-          <Moon className="h-14 w-14 text-purple-200 opacity-30" />
+          <Moon className="h-8 w-8 text-purple-200 opacity-20" />
         </motion.div>
       </div>
 
@@ -348,25 +344,25 @@ export default function MembershipPage() {
         onClose={() => setToast({ message: "", type: "" })}
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
-        {/* Enhanced Hero Header */}
+      <div className="relative z-10 max-w-[1600px] mx-auto px-6 pt-24 pb-12">
+        {/* Compact Hero Header */}
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.6 }}
+          className="text-center mb-8"
         >
-          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-12 shadow-2xl border border-white/20 relative overflow-hidden">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 relative overflow-hidden">
             {/* Decorative elements */}
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400"></div>
 
-            <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center justify-center mb-4">
               <motion.div
                 animate={{ rotate: [0, 360] }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                className="w-20 h-20 bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 rounded-3xl flex items-center justify-center mr-6 shadow-lg"
+                className="w-12 h-12 bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center mr-4 shadow-lg"
               >
-                <Crown className="h-10 w-10 text-white" />
+                <Crown className="h-6 w-6 text-white" />
               </motion.div>
               <div className="text-left">
                 <motion.h1
@@ -438,14 +434,14 @@ export default function MembershipPage() {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.9 + index * 0.1 }}
-                  className={`${item.bgColor} rounded-2xl px-6 py-4 flex items-center space-x-3 shadow-lg border border-white/50 hover:scale-105 transition-transform duration-300`}
+                  className={`${item.bgColor} rounded-xl px-4 py-2 flex items-center space-x-2 shadow-md border border-white/50 hover:scale-105 transition-transform duration-300`}
                 >
                   <div
-                    className={`w-8 h-8 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center`}
+                    className={`w-6 h-6 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center`}
                   >
-                    <item.icon className="h-5 w-5 text-white" />
+                    <item.icon className="h-3.5 w-3.5 text-white" />
                   </div>
-                  <span className={`text-sm font-semibold ${item.textColor}`}>
+                  <span className={`text-xs font-semibold ${item.textColor}`}>
                     {item.text}
                   </span>
                 </motion.div>
@@ -454,12 +450,12 @@ export default function MembershipPage() {
           </div>
         </motion.div>
 
-        {/* Enhanced Message Display */}
+        {/* Compact Message Display */}
         {message.text && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`mb-8 p-6 rounded-2xl backdrop-blur-sm border-2 ${
+            className={`mb-6 p-4 rounded-xl backdrop-blur-sm border-2 ${
               message.type === "success"
                 ? "bg-green-50/90 text-green-700 border-green-200"
                 : "bg-red-50/90 text-red-700 border-red-200"
@@ -467,48 +463,47 @@ export default function MembershipPage() {
           >
             <div className="flex items-center">
               <div
-                className={`w-8 h-8 rounded-full mr-4 flex items-center justify-center ${
+                className={`w-6 h-6 rounded-full mr-3 flex items-center justify-center ${
                   message.type === "success" ? "bg-green-200" : "bg-red-200"
                 }`}
               >
                 {message.type === "success" ? (
-                  <CheckCircle className="h-5 w-5" />
+                  <CheckCircle className="h-4 w-4" />
                 ) : (
-                  <AlertTriangle className="h-5 w-5" />
+                  <AlertTriangle className="h-4 w-4" />
                 )}
               </div>
-              <span className="font-medium text-lg">{message.text}</span>
+              <span className="font-medium text-sm">{message.text}</span>
             </div>
           </motion.div>
         )}
 
-        {/* Enhanced PricingPlans Container */}
+        {/* Compact PricingPlans Container */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-white/95 backdrop-blur-xl rounded-3xl p-10 shadow-2xl border border-white/20 mb-20 relative overflow-hidden"
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="bg-white/95 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 mb-12 relative overflow-hidden"
         >
           {/* Decorative gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-pink-50/30 to-indigo-50/50 pointer-events-none"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-50/30 via-pink-50/20 to-indigo-50/30 pointer-events-none"></div>
 
           <div className="relative z-10">
-            <div className="text-center mb-12">
+            <div className="text-center mb-8">
               <motion.h2
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-4xl font-bold text-gray-800 mb-6"
+                className="text-2xl font-bold text-gray-800 mb-3"
               >
                 Chọn Gói Thành Viên Phù Hợp
               </motion.h2>
               <motion.p
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
+                className="text-sm text-gray-600 max-w-3xl mx-auto"
               >
-                Mỗi gói đều được thiết kế để mang đến trải nghiệm tốt nhất cho
-                từng nhu cầu tập luyện của bạn
+                Mỗi gói đều được thiết kế để mang đến trải nghiệm tốt nhất
               </motion.p>
             </div>
 

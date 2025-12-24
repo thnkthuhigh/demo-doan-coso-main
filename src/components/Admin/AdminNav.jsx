@@ -252,27 +252,27 @@ const AdminNav = ({ activeModule, setActiveModule, isCollapsed, setIsCollapsed }
       `}</style>
 
       <motion.aside
-        initial={{ x: -300, opacity: 0 }}
+        initial={{ x: -240, opacity: 0 }}
         animate={{ 
           x: 0, 
           opacity: 1,
-          width: isCollapsed ? 80 : 320
+          width: isCollapsed ? 64 : 240
         }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
         className="fixed left-0 top-0 h-screen z-30 overflow-hidden"
-        style={{ width: isCollapsed ? '80px' : '320px' }}
+        style={{ width: isCollapsed ? '64px' : '240px' }}
       >
         {/* Toggle Button */}
         <button
           onClick={toggleSidebar}
-          className={`absolute top-4 z-50 p-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-sm transition-all duration-300 group ${
-            isCollapsed ? 'left-1/2 -translate-x-1/2' : 'right-4'
+          className={`absolute top-4 z-50 p-2 bg-white/20 hover:bg-white/30 rounded-lg backdrop-blur-sm transition-all duration-300 group ${
+            isCollapsed ? 'left-1/2 -translate-x-1/2' : 'right-3'
           }`}
         >
           {isCollapsed ? (
-            <Menu className="h-5 w-5 text-gray-700 group-hover:text-gray-900" />
+            <Menu className="h-4 w-4 text-gray-700 group-hover:text-gray-900" />
           ) : (
-            <ChevronLeft className="h-5 w-5 text-gray-700 group-hover:text-gray-900" />
+            <ChevronLeft className="h-4 w-4 text-gray-700 group-hover:text-gray-900" />
           )}
         </button>
         {/* Main container */}
@@ -322,13 +322,13 @@ const AdminNav = ({ activeModule, setActiveModule, isCollapsed, setIsCollapsed }
                   transition={{ delay: 0.4 }}
                   className="flex-1"
                 >
-                  <h2 className="admin-heading text-xl text-gray-800">
+                  <h2 className="admin-heading text-base text-gray-800">
                     Bảng Điều Khiển
                   </h2>
-                  <p className="admin-light text-sm text-gray-600">
+                  <p className="admin-light text-xs text-gray-600">
                     Quản Trị Hệ Thống
                   </p>
-                  <div className="flex items-center mt-2">
+                  <div className="flex items-center mt-1">
                     <div className="w-8 h-px bg-gradient-to-r from-orange-400 to-red-500"></div>
                     <div className="w-2 h-2 bg-red-500 rotate-45 mx-2"></div>
                     <div className="w-8 h-px bg-gradient-to-r from-red-500 to-pink-500"></div>

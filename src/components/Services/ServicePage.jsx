@@ -261,7 +261,7 @@ export default function ServicePage() {
           <div className="absolute top-1/2 right-1/4 w-24 h-24 border-2 border-green-300/50 rotate-12 animate-pulse delay-2000"></div>
         </div>
 
-        <div className="relative z-20 max-w-6xl mx-auto px-4 text-center">
+        <div className="relative z-20 max-w-[1400px] mx-auto px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -327,7 +327,7 @@ export default function ServicePage() {
 
       {/* Service Categories Filter */}
       <section className="py-12 bg-white/80 backdrop-blur-sm border-y border-gray-200">
-        <div className="max-w-6xl mx-auto px-4">
+        <div className="max-w-[1600px] mx-auto px-6">
           <div className="flex flex-wrap justify-center gap-4">
             {categories.map((category) => (
               <motion.button
@@ -351,10 +351,10 @@ export default function ServicePage() {
 
       {/* Services Section */}
       <section
-        className="py-20 bg-gradient-to-br from-white via-pink-50 to-blue-50"
+        className="py-10 bg-gradient-to-br from-white via-pink-50 to-blue-50"
         id="services-section"
       >
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-[1600px] mx-auto px-6">
           <div className="text-center mb-20">
             <div className="text-4xl md:text-5xl text-gray-800 mb-4 font-serif">
               私たちのサービス
@@ -372,7 +372,7 @@ export default function ServicePage() {
           </div>
 
           {loading ? (
-            <div className="flex justify-center items-center py-20">
+            <div className="flex justify-center items-center py-10">
               <div className="text-center">
                 <div className="w-12 h-12 border-2 border-pink-300 border-t-pink-500 rounded-full animate-spin mx-auto mb-6"></div>
                 <p className="text-gray-600">Đang tải dịch vụ...</p>
@@ -494,7 +494,7 @@ export default function ServicePage() {
       </section>
 
       {/* Features Section - Why Choose Us */}
-      <section className="py-20 bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 relative overflow-hidden">
+      <section className="py-10 bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div
@@ -506,7 +506,7 @@ export default function ServicePage() {
           ></div>
         </div>
 
-        <div className="relative max-w-6xl mx-auto px-4">
+        <div className="relative max-w-[1600px] mx-auto px-6">
           <div className="text-center mb-20">
             <div className="text-4xl md:text-5xl text-white mb-4 font-serif">
               なぜ選ぶのか
@@ -562,8 +562,8 @@ export default function ServicePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4">
+      <section className="py-10 bg-white">
+        <div className="max-w-[1600px] mx-auto px-6">
           <div className="text-center mb-16">
             <div className="text-4xl md:text-5xl text-gray-800 mb-4 font-serif">
               実績
@@ -614,7 +614,7 @@ export default function ServicePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-pink-50 via-blue-50 to-purple-50 relative overflow-hidden">
+      <section className="py-10 bg-gradient-to-br from-pink-50 via-blue-50 to-purple-50 relative overflow-hidden">
         {/* Floating Elements */}
         <div className="absolute inset-0 pointer-events-none">
           <Cherry className="absolute top-20 left-10 h-12 w-12 text-pink-300 opacity-40" />
@@ -622,7 +622,7 @@ export default function ServicePage() {
           <Waves className="absolute top-1/2 left-1/4 h-10 w-10 text-cyan-300 opacity-35" />
         </div>
 
-        <div className="relative max-w-6xl mx-auto px-4 text-center">
+        <div className="relative max-w-[1400px] mx-auto px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}

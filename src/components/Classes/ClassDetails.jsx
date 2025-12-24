@@ -49,6 +49,10 @@ import {
   Info,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import {
+  normalizeClassData,
+  normalizeAttendanceArray,
+} from "../../utils/classDataNormalizer";
 
 export default function ClassDetails() {
   const { id } = useParams();
@@ -101,11 +105,16 @@ export default function ClassDetails() {
     try {
       setLoadingAttendance(true);
       const token = localStorage.getItem("token");
+      
+      // ✅ Sử dụng API mới giống Mobile: /api/attendance/my-history/:classId
       const response = await axios.get(
-        `http://localhost:5000/api/attendance/student/${userId}/class/${id}`,
+        `http://localhost:5000/api/attendance/my-history/${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setAttendanceHistory(response.data || []);
+      
+      // Normalize attendance data
+      const normalizedData = normalizeAttendanceArray(response.data);
+      setAttendanceHistory(normalizedData || []);
     } catch (error) {
       console.error("Error fetching attendance:", error);
       setAttendanceHistory([]);
@@ -149,7 +158,10 @@ export default function ClassDetails() {
       const response = await axios.get(
         `http://localhost:5000/api/classes/${id}/details`
       );
-      setClassData(response.data);
+      
+      // ✅ Normalize class data
+      const normalizedClass = normalizeClassData(response.data);
+      setClassData(normalizedClass);
     } catch (error) {
       console.error("Error fetching class details:", error);
       toast.error("Không thể tải thông tin lớp học");
@@ -1077,12 +1089,12 @@ export default function ClassDetails() {
                     </div>
 
                     {loadingAttendance ? (
-                      <div className="text-center py-20">
+                      <div className="text-center py-8">
                         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
                         <p className="mt-4 text-gray-600">Đang tải dữ liệu...</p>
                       </div>
                     ) : attendanceHistory.length === 0 ? (
-                      <div className="text-center py-20">
+                      <div className="text-center py-8">
                         <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                           <AlertCircle className="h-10 w-10 text-gray-400" />
                         </div>

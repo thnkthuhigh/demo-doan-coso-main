@@ -76,10 +76,10 @@ const AdminDashboard = () => {
       {/* Main content area - margin adjusts based on sidebar state */}
       <main 
         className="min-h-screen transition-all duration-300"
-        style={{ marginLeft: isCollapsed ? '80px' : '320px' }}
+        style={{ marginLeft: isCollapsed ? '64px' : '240px' }}
       >
-        <div className="p-6">
-          <div className="max-w-7xl mx-auto">{renderContent()}</div>
+        <div className="p-4">
+          <div className="max-w-[1600px] mx-auto">{renderContent()}</div>
         </div>
       </main>
     </div>
@@ -131,26 +131,26 @@ const DashboardHome = ({ setActiveModule }) => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Modern Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-xl rounded-2xl p-8 text-white">
+    <div className="space-y-4">
+      {/* Compact Header */}
+      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-lg rounded-xl p-5 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold mb-2 drop-shadow-md">
+            <h1 className="text-2xl font-bold mb-1 drop-shadow-md">
               Admin Dashboard
             </h1>
-            <p className="text-blue-100 text-lg">
-              Chào mừng bạn đến với bảng điều khiển quản trị Royal Fitness
+            <p className="text-blue-100 text-sm">
+              Bảng điều khiển quản trị Royal Fitness
             </p>
           </div>
-          <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-            <TrendingUp className="h-10 w-10 text-white" />
+          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+            <TrendingUp className="h-6 w-6 text-white" />
           </div>
         </div>
       </div>
 
-      {/* Stat cards với layout hiện đại */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* Compact Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Tổng người dùng"
           value={stats?.stats?.totalUsers || 0}
@@ -187,12 +187,12 @@ const DashboardHome = ({ setActiveModule }) => {
 
       {/* Charts Section */}
       {stats?.charts && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Enrollment Chart */}
-          <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-800 mb-5 flex items-center">
-              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
-                <Calendar className="h-5 w-5 text-white" />
+          <div className="bg-white shadow-md rounded-lg p-4 border border-gray-100">
+            <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center">
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-2">
+                <Calendar className="h-4 w-4 text-white" />
               </div>
               Đăng ký 7 ngày qua
             </h3>
@@ -230,10 +230,10 @@ const DashboardHome = ({ setActiveModule }) => {
           </div>
 
           {/* Popular Services */}
-          <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-800 mb-5 flex items-center">
-              <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3">
-                <Dumbbell className="h-5 w-5 text-white" />
+          <div className="bg-white shadow-md rounded-lg p-4 border border-gray-100">
+            <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center">
+              <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mr-2">
+                <Dumbbell className="h-4 w-4 text-white" />
               </div>
               Dịch vụ phổ biến
             </h3>
@@ -271,12 +271,12 @@ const DashboardHome = ({ setActiveModule }) => {
         </div>
       )}
 
-      {/* Quick actions */}
-      <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-5">
+      {/* Quick Actions */}
+      <div className="bg-white shadow-md rounded-lg p-4 border border-gray-100">
+        <h2 className="text-base font-bold text-gray-800 mb-3">
           Truy cập nhanh
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
           <QuickAction
             title="Quản lý lớp học"
             icon={<Calendar className="h-6 w-6" />}
@@ -328,10 +328,10 @@ const DashboardHome = ({ setActiveModule }) => {
         </div>
       </div>
 
-      {/* Recent activity */}
-      <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800">
+      {/* Recent Activity */}
+      <div className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-100">
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="text-base font-bold text-gray-800">
             Hoạt động gần đây
           </h2>
         </div>
@@ -384,10 +384,10 @@ const StatCard = ({ title, value, change, icon, color, trend }) => {
   };
 
   return (
-    <div className="bg-white shadow-lg rounded-xl p-5 hover:shadow-xl transition-shadow border border-gray-100">
-      <div className="flex items-start justify-between mb-4">
+    <div className="bg-white shadow-md rounded-lg p-4 hover:shadow-lg transition-shadow border border-gray-100">
+      <div className="flex items-start justify-between mb-3">
         <div
-          className={`p-3 rounded-lg ${colorClasses[color]} shadow-sm`}
+          className={`p-2 rounded-lg ${colorClasses[color]} shadow-sm`}
         >
           <div className="text-white">{icon}</div>
         </div>
@@ -403,13 +403,13 @@ const StatCard = ({ title, value, change, icon, color, trend }) => {
           {trendIcons[trend]}
         </span>
       </div>
-      <h3 className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">
+      <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
         {title}
       </h3>
-      <p className="text-2xl font-bold text-gray-800">
+      <p className="text-xl font-bold text-gray-800">
         {value}
       </p>
-      <p className="text-xs text-gray-500 mt-2">{change}</p>
+      <p className="text-xs text-gray-500 mt-1">{change}</p>
     </div>
   );
 };
@@ -428,13 +428,13 @@ const QuickAction = ({ title, icon, onClick, color }) => {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center p-4 rounded-lg transition-all ${colorClasses[color]} text-white shadow-sm hover:shadow-md`}
+      className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all ${colorClasses[color]} text-white shadow-sm hover:shadow-md aspect-square`}
     >
-      <div className="mb-2">
-        {icon}
+      <div className="mb-1">
+        {React.cloneElement(icon, { className: 'h-4 w-4' })}
       </div>
-      <span className="text-xs font-semibold text-center">
-        {title}
+      <span className="text-[10px] font-semibold text-center leading-tight">
+        {title.split(' ').map((word, i) => <span key={i} className="block">{word}</span>)}
       </span>
     </button>
   );
@@ -452,14 +452,14 @@ const ActivityItem = ({ title, time, icon, color }) => {
   };
 
   return (
-    <div className="flex items-center px-6 py-4 hover:bg-gray-50 transition-colors">
+    <div className="flex items-center px-4 py-3 hover:bg-gray-50 transition-colors">
       <div
-        className={`p-2.5 rounded-lg mr-4 ${colorClasses[color]} shadow-sm`}
+        className={`p-2 rounded-lg mr-3 ${colorClasses[color]} shadow-sm`}
       >
-        <div className="text-white">{icon}</div>
+        <div className="text-white">{React.cloneElement(icon, { className: 'h-4 w-4' })}</div>
       </div>
       <div className="flex-1">
-        <p className="text-sm font-medium text-gray-800 mb-0.5">
+        <p className="text-xs font-medium text-gray-800">
           {title}
         </p>
         <p className="text-xs text-gray-500">{time}</p>

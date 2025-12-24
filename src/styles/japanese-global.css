@@ -200,6 +200,19 @@ body {
   opacity: 1;
 }
 
+.jp-card-hover {
+  background: var(--jp-shiro);
+  border: 1px solid var(--jp-sumi-200);
+  box-shadow: var(--jp-shadow-soft);
+  transition: all 0.3s ease;
+}
+
+.jp-card-hover:hover {
+  box-shadow: var(--jp-shadow-large);
+  transform: translateY(-4px);
+  border-color: var(--jp-sakura-300);
+}
+
 .jp-card-elevated {
   box-shadow: var(--jp-shadow-medium);
 }

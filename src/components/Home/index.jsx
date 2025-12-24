@@ -26,6 +26,9 @@ import {
   Diamond,
   Gem,
 } from "lucide-react";
+import { JpFeatureCard } from "../common/JapaneseCard";
+import { getCardGridClasses } from "../../utils/japaneseSpacing";
+import { HeroStatsCard } from "../common/StatsCard";
 
 export default function HomePage() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -227,7 +230,7 @@ export default function HomePage() {
           <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-gradient-to-br from-green-500/30 to-teal-500/30 rotate-12 rounded-2xl animate-bounce delay-1000"></div>
         </div>
 
-        <div className="relative z-20 max-w-6xl mx-auto px-4 text-center">
+        <div className="relative z-20 max-w-[1400px] mx-auto px-6 text-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -263,8 +266,8 @@ export default function HomePage() {
             </div>
 
             {/* Subtitle with Neon Effect */}
-            <div className="relative mb-12">
-              <p className="text-xl md:text-3xl lg:text-4xl text-white font-bold leading-relaxed">
+            <div className="relative mb-8">
+              <p className="text-lg md:text-xl lg:text-2xl text-white font-bold leading-relaxed">
                 <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">
                   Bắt đầu hành trình hoàn thiện bản thân
                 </span>
@@ -362,21 +365,21 @@ export default function HomePage() {
       </section>
 
       {/* Features Section - Hexagonal Grid Layout */}
-      <section className="relative py-32 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="relative py-12 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+        <div className="max-w-[1600px] mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 1 }}
-            className="text-center mb-20"
+            className="text-center mb-10"
           >
-            <h2 className="text-6xl md:text-7xl font-black bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent mb-8 filter drop-shadow-2xl">
+            <h2 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent mb-4 filter drop-shadow-2xl">
               TẠI SAO CHỌN CHÚNG TÔI?
             </h2>
             <div className="w-40 h-2 bg-gradient-to-r from-pink-500 via-purple-500 via-blue-500 to-green-500 mx-auto rounded-full shadow-lg"></div>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
@@ -412,7 +415,7 @@ export default function HomePage() {
                     <p className="text-white/90 text-sm font-semibold mb-4 uppercase tracking-wider">
                       {feature.subtitle}
                     </p>
-                    <p className="text-white/80 leading-relaxed text-sm">
+                    <p className="text-white/80 leading-relaxed text-sm line-clamp-2">
                       {feature.description}
                     </p>
                   </div>
@@ -427,7 +430,7 @@ export default function HomePage() {
       </section>
 
       {/* Services Section - Curved Layout */}
-      <section className="relative py-32 bg-gradient-to-br from-cyan-900 via-blue-900 to-indigo-900 overflow-hidden">
+      <section className="relative py-12 bg-gradient-to-br from-cyan-900 via-blue-900 to-indigo-900 overflow-hidden">
         {/* Curved Separator */}
         <div className="absolute top-0 left-0 w-full overflow-hidden">
           <svg
@@ -442,31 +445,26 @@ export default function HomePage() {
           </svg>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-[1600px] mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1 }}
             className="text-center mb-20"
           >
-            <h2 className="text-6xl md:text-7xl font-black bg-gradient-to-r from-cyan-300 via-blue-300 to-purple-300 bg-clip-text text-transparent mb-8 filter drop-shadow-2xl">
+            <h2 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-cyan-300 via-blue-300 to-purple-300 bg-clip-text text-transparent mb-4 filter drop-shadow-2xl">
               DỊCH VỤ ĐẲNG CẤP
             </h2>
             <div className="w-40 h-2 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 mx-auto rounded-full shadow-lg"></div>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className={getCardGridClasses('feature')}>
             {displayedServices.map((service, index) => (
               <motion.div
                 key={service._id || service.id || index}
-                initial={{ opacity: 0, scale: 0.5, rotate: -180 }}
-                whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-                transition={{ duration: 0.8, delay: index * 0.2 }}
-                whileHover={{
-                  y: -20,
-                  rotateY: 10,
-                }}
-                className="group perspective-1000"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
               >
                 <UltraServiceCard
                   id={service._id || service.id}
@@ -498,9 +496,9 @@ export default function HomePage() {
       </section>
 
       {/* About Section - Split with 3D Effects */}
-      <section className="relative py-32 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+      <section className="relative py-12 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900">
+        <div className="max-w-[1600px] mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
             <motion.div
               initial={{ opacity: 0, x: -100, rotateY: -45 }}
               whileInView={{ opacity: 1, x: 0, rotateY: 0 }}
@@ -512,7 +510,7 @@ export default function HomePage() {
                 <img
                   src="https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800"
                   alt="Royal Fitness Interior"
-                  className="relative w-full h-96 object-cover rounded-3xl"
+                  className="relative w-full h-52 object-cover rounded-3xl"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-purple-500/30 rounded-3xl"></div>
 
@@ -538,10 +536,10 @@ export default function HomePage() {
               className="space-y-10"
             >
               <div>
-                <h2 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-8 filter drop-shadow-xl">
+                <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-4 filter drop-shadow-xl">
                   VỀ ROYAL FITNESS
                 </h2>
-                <p className="text-white/90 text-xl leading-relaxed">
+                <p className="text-white/90 text-base leading-relaxed line-clamp-3">
                   Royal Fitness ra đời với sứ mệnh nâng cao sức khỏe cộng đồng,
                   cải thiện vóc dáng và rèn luyện tinh thần kỷ luật. Chúng tôi
                   tự hào sở hữu đội ngũ huấn luyện viên chuyên nghiệp cùng hệ
@@ -549,55 +547,36 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* 3D Stats Cards */}
-              <div className="grid grid-cols-2 gap-6">
-                <motion.div
-                  whileHover={{ rotateY: 15, scale: 1.05 }}
-                  className="transform-gpu"
-                >
-                  <UltraStatsCard
-                    number="1,500+"
-                    label="Thành viên hài lòng"
-                    gradient="from-pink-500 to-red-500"
-                    icon={<Heart className="h-8 w-8" />}
-                  />
-                </motion.div>
-
-                <motion.div
-                  whileHover={{ rotateY: -15, scale: 1.05 }}
-                  className="transform-gpu"
-                >
-                  <UltraStatsCard
-                    number="25+"
-                    label="Huấn luyện viên chuyên nghiệp"
-                    gradient="from-blue-500 to-purple-500"
-                    icon={<Users className="h-8 w-8" />}
-                  />
-                </motion.div>
-
-                <motion.div
-                  whileHover={{ rotateY: 15, scale: 1.05 }}
-                  className="transform-gpu"
-                >
-                  <UltraStatsCard
-                    number="150+"
-                    label="Lớp học mỗi tuần"
-                    gradient="from-green-500 to-teal-500"
-                    icon={<Calendar className="h-8 w-8" />}
-                  />
-                </motion.div>
-
-                <motion.div
-                  whileHover={{ rotateY: -15, scale: 1.05 }}
-                  className="transform-gpu"
-                >
-                  <UltraStatsCard
-                    number="10+"
-                    label="Năm kinh nghiệm"
-                    gradient="from-yellow-500 to-orange-500"
-                    icon={<Award className="h-8 w-8" />}
-                  />
-                </motion.div>
+              {/* Stats Cards Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <HeroStatsCard
+                  number="1,500+"
+                  label="Thành viên hài lòng"
+                  gradient="from-pink-500 to-red-500"
+                  icon={Heart}
+                  delay={0}
+                />
+                <HeroStatsCard
+                  number="25+"
+                  label="Huấn luyện viên"
+                  gradient="from-blue-500 to-purple-500"
+                  icon={Users}
+                  delay={0.1}
+                />
+                <HeroStatsCard
+                  number="150+"
+                  label="Lớp học/tuần"
+                  gradient="from-green-500 to-teal-500"
+                  icon={Calendar}
+                  delay={0.2}
+                />
+                <HeroStatsCard
+                  number="10+"
+                  label="Năm kinh nghiệm"
+                  gradient="from-yellow-500 to-orange-500"
+                  icon={Award}
+                  delay={0.3}
+                />
               </div>
 
               <div className="pt-8">
@@ -622,15 +601,15 @@ export default function HomePage() {
       </section>
 
       {/* Trainers Section - Fixed Overflow */}
-      <section className="trainers-section relative py-32 bg-gradient-to-br from-red-900 via-pink-900 to-purple-900">
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="trainers-section relative py-12 bg-gradient-to-br from-red-900 via-pink-900 to-purple-900">
+        <div className="max-w-[1600px] mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 1 }}
             className="text-center mb-20"
           >
-            <h2 className="text-6xl md:text-7xl font-black bg-gradient-to-r from-orange-300 via-red-300 to-pink-300 bg-clip-text text-transparent mb-8 filter drop-shadow-2xl">
+            <h2 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-orange-300 via-red-300 to-pink-300 bg-clip-text text-transparent mb-4 filter drop-shadow-2xl">
               ĐỘI NGŨ SIÊU SAO
             </h2>
             <div className="w-40 h-2 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 mx-auto rounded-full shadow-lg"></div>
@@ -658,22 +637,22 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials Section - Floating Cards */}
-      <section className="relative py-32 bg-gradient-to-br from-green-900 via-teal-900 to-blue-900">
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="relative py-12 bg-gradient-to-br from-green-900 via-teal-900 to-blue-900">
+        <div className="max-w-[1600px] mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.5 }}
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1 }}
             className="text-center mb-20"
           >
-            <h2 className="text-6xl md:text-7xl font-black bg-gradient-to-r from-green-300 via-teal-300 to-blue-300 bg-clip-text text-transparent mb-8 filter drop-shadow-2xl">
+            <h2 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-green-300 via-teal-300 to-blue-300 bg-clip-text text-transparent mb-4 filter drop-shadow-2xl">
               KHÁCH HÀNG NÓI GÌ?
             </h2>
             <div className="w-40 h-2 bg-gradient-to-r from-green-500 via-teal-500 to-blue-500 mx-auto rounded-full shadow-lg"></div>
           </motion.div>
 
           <div
-            className="grid grid-cols-1 md:grid-cols-3 gap-10"
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
             style={{ overflow: "visible", padding: "2rem 1rem" }}
           >
             {testimonials.map((testimonial, index) => (
@@ -731,7 +710,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-4 text-center">
+        <div className="relative z-10 max-w-[1400px] mx-auto px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 100, scale: 0.5 }}
             whileInView={{ opacity: 1, y: 0, scale: 1 }}
@@ -741,7 +720,7 @@ export default function HomePage() {
               SẴN SÀNG THAY ĐỔI?
             </h2>
 
-            <p className="text-2xl md:text-3xl text-white/90 mb-16 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-4xl mx-auto leading-relaxed">
               Hãy tham gia cộng đồng Royal Fitness ngay hôm nay và cảm nhận sự
               khác biệt
             </p>
@@ -786,68 +765,18 @@ export default function HomePage() {
 
 // Ultra Service Card Component
 function UltraServiceCard({ id, title, image, index }) {
-  const gradients = [
-    "from-pink-500 via-red-500 to-orange-500",
-    "from-purple-500 via-indigo-500 to-blue-500",
-    "from-blue-500 via-cyan-500 to-teal-500",
-    "from-green-500 via-emerald-500 to-teal-500",
-  ];
-
   return (
-    <Link to={`/services/detail/${id}`} className="block group">
-      <div className="relative overflow-hidden rounded-3xl bg-white shadow-2xl hover:shadow-4xl transition-all duration-700 transform group-hover:scale-105 group-hover:rotate-2">
-        {/* Image with Overlay */}
-        <div className="relative overflow-hidden">
-          <img
-            src={image}
-            alt={title}
-            className="w-full h-80 object-cover group-hover:scale-125 transition-transform duration-1000"
-          />
-          <div
-            className={`absolute inset-0 bg-gradient-to-t ${
-              gradients[index % gradients.length]
-            } opacity-70 group-hover:opacity-50 transition-opacity duration-500`}
-          />
-
-          {/* Floating Play Button */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500">
-            <motion.div
-              whileHover={{ scale: 1.3, rotate: 180 }}
-              className="w-24 h-24 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center transform scale-0 group-hover:scale-100 transition-transform duration-500 delay-200 shadow-2xl"
-            >
-              <Play className="h-12 w-12 text-white ml-2" />
-            </motion.div>
-          </div>
-
-          {/* Category Badge */}
-          <div className="absolute top-4 left-4">
-            <div className="bg-black/50 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold">
-              #{index + 1} HOT
-            </div>
-          </div>
+    <JpFeatureCard
+      title={title}
+      image={image}
+      description={`Trải nghiệm dịch vụ ${title} tại Royal Fitness với chương trình tập luyện chuyên nghiệp và hiệu quả`}
+      badge={
+        <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+          #{index + 1} HOT
         </div>
-
-        {/* Content */}
-        <div className="p-8 bg-gradient-to-br from-white to-gray-50">
-          <h3 className="text-3xl font-black text-gray-800 mb-4 group-hover:text-purple-600 transition-colors">
-            {title}
-          </h3>
-          <p className="text-gray-600 mb-6 leading-relaxed text-lg">
-            Trải nghiệm dịch vụ {title} tại Royal Fitness với chương trình tập
-            luyện chuyên nghiệp và hiệu quả
-          </p>
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <span className="text-purple-600 font-bold text-lg">
-              XEM CHI TIẾT
-            </span>
-            <ArrowRight className="h-6 w-6 text-purple-600 group-hover:translate-x-2 transition-transform" />
-          </div>
-        </div>
-
-        {/* Hover Border Effect */}
-        <div className="absolute inset-0 rounded-3xl border-4 border-transparent group-hover:border-purple-500 transition-all duration-500"></div>
-      </div>
-    </Link>
+      }
+      href={`/services/detail/${id}`}
+    />
   );
 }
 

@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import servicesData from "./data/services.json";
+import { JpCard, JpFeatureCard } from "../common/JapaneseCard";
+import { getCardGridClasses, getSectionSpacing } from "../../utils/japaneseSpacing";
 import {
   VintageContainer,
   VintageSection,
@@ -11,7 +13,7 @@ import {
   VintageText,
   VintageButton,
   VintageGrid,
-} from "../Templates/VintageLayout";
+} from "../Templates/VintageCompat";
 import {
   Star,
   Clock,
@@ -382,7 +384,7 @@ export default function ServiceDetail() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-vintage-cream via-vintage-warm to-vintage-cream pt-24 pb-16">
         <VintageContainer>
-          <div className="flex justify-center items-center py-20">
+          <div className="flex justify-center items-center py-10">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -409,7 +411,7 @@ export default function ServiceDetail() {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20"
+            className="text-center py-10"
           >
             <VintageCard className="p-16 text-center max-w-2xl mx-auto shadow-elegant">
               <div className="w-24 h-24 bg-gradient-to-br from-vintage-warm to-vintage-gold/20 rounded-full flex items-center justify-center mx-auto mb-8">
@@ -700,7 +702,7 @@ export default function ServiceDetail() {
                       <img
                         src={service.image}
                         alt={service.name}
-                        className="w-full h-[500px] object-cover group-hover:scale-105 transition-transform duration-700"
+                        className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-700"
                       />
 
                       {/* Gradient Overlay */}

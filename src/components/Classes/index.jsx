@@ -35,6 +35,7 @@ import {
   Gem,
   Activity,
 } from "lucide-react";
+import { normalizeClassArray } from "../../utils/classDataNormalizer";
 
 export default function ViewClasses() {
   const navigate = useNavigate();
@@ -74,7 +75,10 @@ export default function ViewClasses() {
   const fetchClasses = async () => {
     try {
       const response = await axios.get("http://localhost:5000/api/classes");
-      setClasses(response.data);
+      
+      // ✅ Normalize class data để đồng nhất với mobile
+      const normalizedClasses = normalizeClassArray(response.data);
+      setClasses(normalizedClasses);
     } catch (error) {
       console.error("Error fetching classes:", error);
       showMessage("❌ Không thể tải danh sách lớp học", "error");
@@ -106,7 +110,13 @@ export default function ViewClasses() {
       console.log("Total enrollments:", response.data?.length);
       console.log("Unpaid enrollments:", response.data?.filter(e => !e.paymentStatus).length);
       
-      setUserEnrollments(response.data || []);
+      // ✅ Normalize enrollment data
+      const enrollmentsWithNormalizedClasses = response.data.map(enrollment => ({
+        ...enrollment,
+        class: enrollment.class ? normalizeClassArray([enrollment.class])[0] : null
+      }));
+      
+      setUserEnrollments(enrollmentsWithNormalizedClasses || []);
     } catch (error) {
       console.error("Error fetching user enrollments:", error);
       setUserEnrollments([]);
@@ -519,7 +529,7 @@ export default function ViewClasses() {
         </motion.div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="max-w-[1600px] mx-auto px-6 relative z-10">
         {/* Japanese Hero Section */}
         <motion.div variants={itemVariants} className="mb-12">
           <div className="bg-white/90 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-gray-200/50 relative overflow-hidden">
@@ -702,7 +712,7 @@ export default function ViewClasses() {
             </motion.button>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredClasses.map((classItem, index) => {
               const statusInfo = getStatusInfo(classItem.status);
               const StatusIcon = statusInfo.icon;
@@ -724,9 +734,9 @@ export default function ViewClasses() {
                   whileHover={{ y: -12, scale: 1.02 }}
                   className="group"
                 >
-                  <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg border border-gray-200/50 overflow-hidden hover:shadow-2xl hover:border-gray-300/50 transition-all duration-500 h-full flex flex-col">
+                  <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden hover:shadow-2xl hover:border-gray-300/50 transition-all duration-500 h-full flex flex-col">
                     {/* Header Section */}
-                    <div className="relative p-6 bg-gradient-to-br from-gray-50 to-white border-b border-gray-100">
+                    <div className="relative p-4 bg-gradient-to-br from-gray-50 to-white border-b border-gray-100">
                       {/* Status Badge */}
                       <div className="absolute top-4 right-4">
                         <div
@@ -739,12 +749,12 @@ export default function ViewClasses() {
                         </div>
                       </div>
 
-                      <div className="pr-32">
-                        <h3 className="text-xl font-bold text-gray-800 mb-3 line-clamp-2 group-hover:text-pink-600 transition-colors">
+                      <div className="pr-28">
+                        <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-pink-600 transition-colors">
                           {classItem.className || "Tên Lớp Học"}
                         </h3>
-                        <div className="flex items-center mb-2">
-                          <Star className="h-5 w-5 text-pink-500 mr-2 fill-current" />
+                        <div className="flex items-center mb-1">
+                          <Star className="h-4 w-4 text-pink-500 mr-1.5 fill-current" />
                           <span className="text-pink-600 font-semibold">
                             {classItem.serviceName || "Dịch Vụ"}
                           </span>
@@ -753,56 +763,56 @@ export default function ViewClasses() {
                     </div>
 
                     {/* Content Section */}
-                    <div className="flex-1 p-6">
-                      <div className="space-y-5">
+                    <div className="flex-1 p-4">
+                      <div className="space-y-3">
                         {/* Instructor & Info Grid */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                            <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center mr-3">
-                              <User className="h-5 w-5 text-pink-600" />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                            <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center mr-2">
+                              <User className="h-4 w-4 text-pink-600" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-500 font-medium">
-                                Huấn Luyện Viên
+                                HLV
                               </p>
-                              <p className="font-semibold text-gray-800 truncate">
+                              <p className="text-sm font-semibold text-gray-800 truncate">
                                 {classItem.instructorName || "Chưa Có"}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                              <Users className="h-5 w-5 text-blue-600" />
+                          <div className="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-2">
+                              <Users className="h-4 w-4 text-blue-600" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-500 font-medium">
                                 Học Viên
                               </p>
-                              <p className="font-semibold text-gray-800">
+                              <p className="text-sm font-semibold text-gray-800">
                                 {classItem.currentMembers || 0}/
                                 {classItem.maxMembers}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                              <MapPin className="h-5 w-5 text-green-600" />
+                          <div className="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-2">
+                              <MapPin className="h-4 w-4 text-green-600" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-500 font-medium">
                                 Địa Điểm
                               </p>
-                              <p className="font-semibold text-gray-800 truncate">
+                              <p className="text-sm font-semibold text-gray-800 truncate">
                                 {classItem.location || "Phòng Tập Chính"}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mr-3">
-                              <DollarSign className="h-5 w-5 text-amber-600" />
+                          <div className="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center mr-2">
+                              <DollarSign className="h-4 w-4 text-amber-600" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-500 font-medium">
@@ -816,27 +826,27 @@ export default function ViewClasses() {
                         </div>
 
                         {/* Schedule */}
-                        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                          <div className="flex items-center mb-2">
-                            <Clock className="h-5 w-5 text-blue-600 mr-2" />
-                            <span className="text-sm font-semibold text-blue-700">
+                        <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                          <div className="flex items-center mb-1">
+                            <Clock className="h-4 w-4 text-blue-600 mr-1.5" />
+                            <span className="text-xs font-semibold text-blue-700">
                               Lịch Học
                             </span>
                           </div>
-                          <p className="text-gray-700 font-medium text-sm">
+                          <p className="text-gray-700 text-xs font-medium">
                             {formatSchedule(classItem.schedule)}
                           </p>
                         </div>
 
                         {/* Duration */}
-                        <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
-                          <div className="flex items-center mb-2">
-                            <Calendar className="h-5 w-5 text-purple-600 mr-2" />
-                            <span className="text-sm font-semibold text-purple-700">
+                        <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
+                          <div className="flex items-center mb-1">
+                            <Calendar className="h-4 w-4 text-purple-600 mr-1.5" />
+                            <span className="text-xs font-semibold text-purple-700">
                               Thời Gian
                             </span>
                           </div>
-                          <p className="text-gray-700 font-medium text-sm">
+                          <p className="text-gray-700 text-xs font-medium">
                             {new Date(classItem.startDate).toLocaleDateString(
                               "vi-VN"
                             )}{" "}
@@ -849,8 +859,8 @@ export default function ViewClasses() {
 
                         {/* Description */}
                         {classItem.description && (
-                          <div className="p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-100">
-                            <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
+                          <div className="p-3 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg border border-gray-100">
+                            <p className="text-gray-600 text-xs line-clamp-2 leading-relaxed">
                               {classItem.description}
                             </p>
                           </div>
@@ -859,8 +869,8 @@ export default function ViewClasses() {
                     </div>
 
                     {/* Actions */}
-                    <div className="p-6 pt-0 mt-auto">
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div className="p-4 pt-0 mt-auto">
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}

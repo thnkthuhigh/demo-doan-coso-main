@@ -266,7 +266,7 @@ export default function Club() {
           <div className="absolute top-1/2 right-1/4 w-20 h-20 border border-green-300/30 rotate-12 animate-pulse delay-2000"></div>
         </div>
 
-        <div className="relative z-20 max-w-6xl mx-auto px-4">
+        <div className="relative z-20 max-w-[1400px] mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -325,8 +325,8 @@ export default function Club() {
       </section>
 
       {/* Features Section */}
-      <section className="features-section section-spacing py-20 bg-gradient-to-br from-pink-50 via-white to-blue-50">
-        <div className="max-w-6xl mx-auto px-4">
+      <section className="features-section section-spacing py-10 bg-gradient-to-br from-pink-50 via-white to-blue-50">
+        <div className="max-w-[1600px] mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-light text-gray-800 mb-6">
               Tại Sao Chọn Chúng Tôi?
@@ -369,10 +369,10 @@ export default function Club() {
 
       {/* Club List Section */}
       <section
-        className="club-section section-spacing py-20 bg-white"
+        className="club-section section-spacing py-10 bg-white"
         id="clubs-section"
       >
-        <div className="club-container max-w-6xl mx-auto px-4">
+        <div className="club-container max-w-[1600px] mx-auto px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl md:text-5xl font-light text-gray-800 mb-6">
               Khám Phá Các Câu Lạc Bộ
@@ -486,8 +486,8 @@ export default function Club() {
       </section>
 
       {/* Membership Section */}
-      <section className="membership-section py-20 bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="max-w-6xl mx-auto px-4">
+      <section className="membership-section py-10 bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="max-w-[1600px] mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-light text-gray-800 mb-6">
               Gói Thành Viên

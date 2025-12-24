@@ -11,6 +11,10 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import {
+  normalizeAttendanceArray,
+  calculateAttendanceStats,
+} from "../../utils/classDataNormalizer";
 
 export default function UserAttendance() {
   const [attendanceData, setAttendanceData] = useState(null);
@@ -39,14 +43,25 @@ export default function UserAttendance() {
         throw new Error("Không tìm thấy token xác thực");
       }
 
+      // ✅ Sử dụng API mới giống Mobile: /api/attendance/my-history
       const response = await axios.get(
-        `http://localhost:5000/api/attendance/user/${userId}/report`,
+        `http://localhost:5000/api/attendance/my-history`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      setAttendanceData(response.data);
+      // Normalize data từ backend
+      const normalizedAttendances = normalizeAttendanceArray(response.data);
+      
+      // Tính toán statistics
+      const stats = calculateAttendanceStats(normalizedAttendances);
+
+      // Format data để hiển thị
+      setAttendanceData({
+        attendanceRecords: normalizedAttendances,
+        ...stats,
+      });
     } catch (error) {
       console.error("Error fetching attendance report:", error);
 
@@ -97,7 +112,7 @@ export default function UserAttendance() {
     return (
       <div className="min-h-screen bg-gray-50 pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-16">
+          <div className="text-center py-8">
             <AlertTriangle className="mx-auto h-16 w-16 text-red-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">{error}</h3>
             <p className="text-gray-500 mb-4">
@@ -119,7 +134,7 @@ export default function UserAttendance() {
     return (
       <div className="min-h-screen bg-gray-50 pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-16">
+          <div className="text-center py-8">
             <Calendar className="mx-auto h-16 w-16 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Chưa có dữ liệu điểm danh
@@ -280,18 +295,18 @@ export default function UserAttendance() {
 
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {record.classId?.className || "N/A"}
+                        {record.classInfo?.name || record.classInfo?.className || "N/A"}
                       </p>
                       <p className="text-sm text-gray-600">
                         Buổi {record.sessionNumber} -{" "}
-                        {record.classId?.serviceName || "N/A"}
+                        {record.classInfo?.instructor?.fullName || "N/A"}
                       </p>
                     </div>
                   </div>
 
                   <div className="text-right">
                     <p className="text-sm text-gray-900">
-                      {new Date(record.sessionDate).toLocaleDateString("vi-VN")}
+                      {new Date(record.date).toLocaleDateString("vi-VN")}
                     </p>
                     <div className="flex items-center mt-1">
                       {record.isPresent ? (
@@ -300,9 +315,9 @@ export default function UserAttendance() {
                           <span className="text-sm text-green-600 font-medium">
                             Có mặt
                           </span>
-                          {record.checkinTime && (
+                          {record.markedAt && (
                             <span className="text-xs text-gray-500 ml-2">
-                              {new Date(record.checkinTime).toLocaleTimeString(
+                              {new Date(record.markedAt).toLocaleTimeString(
                                 "vi-VN"
                               )}
                             </span>

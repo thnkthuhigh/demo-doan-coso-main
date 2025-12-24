@@ -36,6 +36,8 @@ import {
   Shield,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { normalizeClassArray, normalizeAttendanceArray } from "../../utils/classDataNormalizer";
+
 
 export default function UserClasses() {
   const navigate = useNavigate();
@@ -97,7 +99,13 @@ export default function UserClasses() {
         }
       );
 
-      setEnrollments(response.data || []);
+      // ✅ Normalize enrollment data
+      const enrollmentsWithNormalizedClasses = (response.data || []).map(enrollment => ({
+        ...enrollment,
+        class: enrollment.class ? normalizeClassArray([enrollment.class])[0] : null
+      }));
+      
+      setEnrollments(enrollmentsWithNormalizedClasses);
 
       if (response.data && response.data.length > 0) {
         fetchAttendanceData(uid);
@@ -120,16 +128,21 @@ export default function UserClasses() {
   const fetchAttendanceData = async (uid) => {
     try {
       const token = localStorage.getItem("token");
+      
+      // ✅ Sử dụng API mới: /api/attendance/my-history
       const response = await axios.get(
-        `http://localhost:5000/api/attendance/user/${uid}/report`,
+        `http://localhost:5000/api/attendance/my-history`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
+      // Normalize attendance data
+      const normalizedAttendances = normalizeAttendanceArray(response.data);
+      
       const attendanceByClass = {};
-      response.data.attendanceRecords?.forEach((record) => {
-        const classId = record.classId?._id || record.classId;
+      normalizedAttendances.forEach((record) => {
+        const classId = record.classInfo?._id || record.classId?._id || record.classId;
         if (!attendanceByClass[classId]) {
           attendanceByClass[classId] = {
             total: 0,
@@ -138,7 +151,7 @@ export default function UserClasses() {
           };
         }
         attendanceByClass[classId].total++;
-        if (record.isPresent) {
+        if (record.isPresent || record.status === 'present') {
           attendanceByClass[classId].attended++;
         } else {
           attendanceByClass[classId].missed++;
@@ -631,28 +644,28 @@ export default function UserClasses() {
                   whileHover={{ y: -12, scale: 1.02 }}
                   className="group"
                 >
-                  <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg border border-gray-200/50 overflow-hidden hover:shadow-2xl hover:border-gray-300/50 transition-all duration-500 h-full flex flex-col">
+                  <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden hover:shadow-2xl hover:border-gray-300/50 transition-all duration-500 h-full flex flex-col">
                     {/* Header Section */}
-                    <div className="relative p-6 bg-gradient-to-br from-gray-50 to-white border-b border-gray-100">
+                    <div className="relative p-4 bg-gradient-to-br from-gray-50 to-white border-b border-gray-100">
                       {/* Status Badge */}
                       <div className="absolute top-4 right-4">
                         <div
-                          className={`flex items-center px-3 py-2 rounded-full border-2 ${statusInfo.bgColor} ${statusInfo.textColor} ${statusInfo.borderColor} backdrop-blur-md shadow-md`}
+                          className={`flex items-center px-3 py-1.5 rounded-full border-2 ${statusInfo.bgColor} ${statusInfo.textColor} ${statusInfo.borderColor} backdrop-blur-md shadow-md`}
                         >
-                          <StatusIcon className="h-4 w-4 mr-2" />
-                          <span className="text-sm font-bold whitespace-nowrap">
+                          <StatusIcon className="h-4 w-4 mr-1.5" />
+                          <span className="text-xs font-bold whitespace-nowrap">
                             {statusInfo.text}
                           </span>
                         </div>
                       </div>
 
-                      <div className="pr-32">
-                        <h3 className="text-xl font-bold text-gray-800 mb-3 line-clamp-2 group-hover:text-pink-600 transition-colors">
+                      <div className="pr-28">
+                        <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-pink-600 transition-colors">
                           {enrollment.class?.className || "Tên Lớp Học"}
                         </h3>
-                        <div className="flex items-center mb-2">
-                          <Star className="h-5 w-5 text-pink-500 mr-2 fill-current" />
-                          <span className="text-pink-600 font-semibold">
+                        <div className="flex items-center mb-1">
+                          <Star className="h-4 w-4 text-pink-500 mr-1.5 fill-current" />
+                          <span className="text-sm text-pink-600 font-semibold">
                             {enrollment.class?.serviceName || "Dịch Vụ"}
                           </span>
                         </div>
@@ -660,33 +673,33 @@ export default function UserClasses() {
                     </div>
 
                     {/* Content Section */}
-                    <div className="flex-1 p-6">
-                      <div className="space-y-5">
+                    <div className="flex-1 p-4">
+                      <div className="space-y-3">
                         {/* Instructor & Location */}
-                        <div className="grid grid-cols-1 gap-4">
-                          <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                            <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center mr-3">
-                              <User className="h-5 w-5 text-pink-600" />
+                        <div className="grid grid-cols-1 gap-3">
+                          <div className="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                            <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center mr-2">
+                              <User className="h-4 w-4 text-pink-600" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-500 font-medium">
                                 Huấn Luyện Viên
                               </p>
-                              <p className="font-semibold text-gray-800 truncate">
+                              <p className="text-sm font-semibold text-gray-800 truncate">
                                 {enrollment.class?.instructorName || "Chưa Có"}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                              <MapPin className="h-5 w-5 text-blue-600" />
+                          <div className="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-2">
+                              <MapPin className="h-4 w-4 text-blue-600" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-500 font-medium">
                                 Địa Điểm
                               </p>
-                              <p className="font-semibold text-gray-800 truncate">
+                              <p className="text-sm font-semibold text-gray-800 truncate">
                                 {enrollment.class?.location ||
                                   "Phòng Tập Chính"}
                               </p>
@@ -695,25 +708,25 @@ export default function UserClasses() {
                         </div>
 
                         {/* Schedule */}
-                        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                          <div className="flex items-center mb-2">
-                            <Clock className="h-5 w-5 text-blue-600 mr-2" />
-                            <span className="text-sm font-semibold text-blue-700">
+                        <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                          <div className="flex items-center mb-1">
+                            <Clock className="h-4 w-4 text-blue-600 mr-1.5" />
+                            <span className="text-xs font-semibold text-blue-700">
                               Lịch Học
                             </span>
                           </div>
-                          <p className="text-gray-700 font-medium text-sm">
+                          <p className="text-gray-700 font-medium text-xs">
                             {formatSchedule(enrollment.class?.schedule)}
                           </p>
                         </div>
 
                         {/* Progress */}
-                        <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-sm font-semibold text-purple-700">
+                        <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-purple-700">
                               Tiến Độ Học Tập
                             </span>
-                            <span className="text-sm font-bold text-purple-600">
+                            <span className="text-xs font-bold text-purple-600">
                               {enrollment.class?.currentSession || 0} /{" "}
                               {enrollment.class?.totalSessions || 0} buổi
                             </span>
@@ -740,18 +753,18 @@ export default function UserClasses() {
 
                         {/* Attendance */}
                         {attendanceStats.total > 0 && (
-                          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
-                            <div className="flex items-center justify-between mb-3">
-                              <span className="text-sm font-semibold text-green-700">
+                          <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-semibold text-green-700">
                                 Điểm Danh
                               </span>
-                              <span className="text-sm font-bold text-green-600">
+                              <span className="text-xs font-bold text-green-600">
                                 {attendanceStats.rate}% (
                                 {attendanceStats.attended}/
                                 {attendanceStats.total})
                               </span>
                             </div>
-                            <div className="w-full bg-green-200 rounded-full h-3">
+                            <div className="w-full bg-green-200 rounded-full h-2">
                               <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${attendanceStats.rate}%` }}
@@ -759,7 +772,7 @@ export default function UserClasses() {
                                   duration: 1,
                                   delay: index * 0.1 + 0.3,
                                 }}
-                                className="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full"
+                                className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full"
                               ></motion.div>
                             </div>
                           </div>
@@ -768,9 +781,9 @@ export default function UserClasses() {
                     </div>
 
                     {/* Actions */}
-                    <div className="p-6 pt-0 mt-auto">
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                        <div className="flex space-x-3">
+                    <div className="p-4 pt-0 mt-auto">
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div className="flex space-x-2">
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -779,9 +792,9 @@ export default function UserClasses() {
                                 `/classes/${enrollment.class?._id}/details`
                               )
                             }
-                            className="flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg"
+                            className="flex items-center text-blue-600 hover:text-blue-700 font-medium text-xs transition-colors bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg"
                           >
-                            <Eye className="h-4 w-4 mr-1" />
+                            <Eye className="h-3.5 w-3.5 mr-1" />
                             Chi Tiết
                           </motion.button>
 
@@ -792,9 +805,9 @@ export default function UserClasses() {
                               setSelectedEnrollment(enrollment);
                               setShowDetailModal(true);
                             }}
-                            className="flex items-center text-purple-600 hover:text-purple-700 font-medium text-sm transition-colors bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-lg"
+                            className="flex items-center text-purple-600 hover:text-purple-700 font-medium text-xs transition-colors bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-lg"
                           >
-                            <BarChart3 className="h-4 w-4 mr-1" />
+                            <BarChart3 className="h-3.5 w-3.5 mr-1" />
                             Thống Kê
                           </motion.button>
                         </div>
